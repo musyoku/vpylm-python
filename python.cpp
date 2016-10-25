@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <boost/python.hpp>
+#include "vpylm/c_printf.h"
 #include "vpylm/node.h"
 #include "vpylm/vpylm.h"
 #include "vpylm/vocab.h"
@@ -25,13 +26,15 @@ private:
 
 public:
 	PyVPYLM(){
-		this->vpylm = new VPYLM();
+		vpylm = new VPYLM();
+		c_printf("[n]%s", " VPYLMを初期化しています ...\n");
 	}
 
 	// 基底分布 i.e. 単語（文字）ゼログラム確率
 	// 1 / 単語数（文字数）でよい
 	void set_g0(double g0){
 		this->vpylm->_g0 = g0;
+		c_printf("[n]%s%f\n", " G0 <- ", g0);
 	}
 
 	void load(string filename){
@@ -41,7 +44,7 @@ public:
 	python::list train(python::list &sentence, python::list &prev_order){
 		std::vector<id> word_ids;
 		int len = python::len(sentence);
-		for(int i=0; i<len; i++) {
+		for(int i = 0; i<len; i++) {
 			word_ids.push_back(python::extract<id>(sentence[i]));
 		}
 
@@ -50,10 +53,8 @@ public:
 			if(n_t > 0){
 				bool success = vpylm->remove(word_ids, w_t_i, n_t);
 				if(success == false){
-					printf("\x1b[41;97m");
-					printf("WARNING");
-					printf("\x1b[49;39m");
-					printf(" Failed to remove a customer from VPYLM.\n");
+					c_printf("[R]%s", "エラー");
+					c_printf("[n]%s", " 客を除去できませんでした\n");
 				}
 			}
 		}				
@@ -61,7 +62,6 @@ public:
 		vector<int> new_order;
 		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){
 			int n_t = vpylm->sampleOrder(word_ids, w_t_i);
-			cout << n_t << endl;
 			vpylm->add(word_ids, w_t_i, n_t);
 			new_order.push_back(n_t);
 		}
@@ -81,6 +81,10 @@ public:
 	int get_num_customers(){
 		return vpylm->numCustomers();
 	}
+
+	void sample_hyperparameters(){
+		vpylm->sampleHyperParams();
+	}
 };
 
 BOOST_PYTHON_MODULE(vpylm){
@@ -90,5 +94,6 @@ BOOST_PYTHON_MODULE(vpylm){
 	.def("get_max_depth", &PyVPYLM::get_max_depth)
 	.def("get_num_child_nodes", &PyVPYLM::get_num_child_nodes)
 	.def("get_num_customers", &PyVPYLM::get_num_customers)
+	.def("sample_hyperparameters", &PyVPYLM::sample_hyperparameters)
 	.def("load", &PyVPYLM::load);
 }
