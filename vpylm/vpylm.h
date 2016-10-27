@@ -289,7 +289,7 @@ public:
 		return p;
 	}
 
-	id sampleNextWord(vector<id> &context_ids, id eos_id){
+	id sampleNextWord(vector<id> &context_ids){
 		int w_t_i = context_ids.size() - 1;
 		Node* node = _root;
 		vector<double> probs;
@@ -313,7 +313,7 @@ public:
 			}
 		}
 		if(sum == 0){
-			return eos_id;
+			return 0;
 		}
 		double ratio = 1.0 / sum;
 		uniform_real_distribution<double> rand(0, 1);
@@ -341,10 +341,10 @@ public:
 			}
 		}
 		if(word_ids.size() == 0){
-			return eos_id;
+			return 0;
 		}
 		if(sum == 0){
-			return eos_id;
+			return 0;
 		}
 		ratio = 1.0 / sum;
 		r = Sampler::uniform(0, 1);
@@ -379,28 +379,31 @@ public:
 		return _root->_sum_pass_counts();
 	}
 
-	void save(string dir = "model/"){
-		string filename = dir + "vpylm.model";
+	bool save(){
+		string filename = "vpylm.model";
 		std::ofstream ofs(filename);
 		boost::archive::binary_oarchive oarchive(ofs);
 		oarchive << static_cast<const VPYLM&>(*this);
-		cout << "saved to " << filename << endl;
-		cout << "	num_customers: " << numCustomers() << endl;
-		cout << "	num_nodes: " << numChildNodes() << endl;
-		cout << "	max_depth: " << maxDepth() << endl;
+		// cout << "saved to " << filename << endl;
+		// cout << "	num_customers: " << numCustomers() << endl;
+		// cout << "	num_nodes: " << numChildNodes() << endl;
+		// cout << "	max_depth: " << maxDepth() << endl;
+		return true;
 	}
 
-	void load(string dir = "model/"){
-		string filename = dir + "vpylm.model";
+	bool load(){
+		string filename = "vpylm.model";
 		std::ifstream ifs(filename);
 		if(ifs.good()){
-			cout << "loading " << filename << endl;
+			// cout << "loading " << filename << endl;
 			boost::archive::binary_iarchive iarchive(ifs);
 			iarchive >> *this;
-			cout << "	num_customers: " << numCustomers() << endl;
-			cout << "	num_nodes: " << numChildNodes() << endl;
-			cout << "	max_depth: " << maxDepth() << endl;
+			// cout << "	num_customers: " << numCustomers() << endl;
+			// cout << "	num_nodes: " << numChildNodes() << endl;
+			// cout << "	max_depth: " << maxDepth() << endl;
+			return true;
 		}
+		return false;
 	}
 };
 

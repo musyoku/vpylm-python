@@ -75,7 +75,10 @@ void vpylm_generate_sentence(Vocab* vocab, vector<wstring> &dataset, string mode
 		sentence_char_ids.clear();
 		sentence_char_ids.push_back(vocab->bosId());
 		for(int i = 0;i < max_length;i++){
-			id word_id = vpylm->sampleNextWord(sentence_char_ids, vocab->eosId());
+			id word_id = vpylm->sampleNextWord(sentence_char_ids);
+			if(word_id == 0){
+				word_id = vocab->eosId()
+			}
 			sentence_char_ids.push_back(word_id);
 			if(word_id == vocab->eosId()){
 				break;

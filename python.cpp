@@ -37,8 +37,14 @@ public:
 		c_printf("[n]%s%f\n", " G0 <- ", g0);
 	}
 
-	void load(string filename){
-		cout << filename << endl;
+	bool save(){
+		c_printf("[n]%s", " VPYLMを保存しています ...\n");
+		return vpylm->save();
+	}
+
+	bool load(){
+		c_printf("[n]%s", " VPYLMを読み込んでいます ...\n");
+		return vpylm->load();
 	}
 
 	python::list perform_gibbs_sampling(python::list &sentence, python::list &prev_orders){
@@ -99,6 +105,15 @@ public:
 		vpylm->sampleHyperParams();
 	}
 
+	id sample_next_word(python::list &sentence){
+		std::vector<id> word_ids;
+		int len = python::len(sentence);
+		for(int i = 0; i<len; i++) {
+			word_ids.push_back(python::extract<id>(sentence[i]));
+		}
+		return vpylm->sampleNextWord(word_ids);
+	}
+
 	double compute_log_Pw(python::list &sentence){
 		std::vector<id> word_ids;
 		int len = python::len(sentence);
@@ -120,5 +135,7 @@ BOOST_PYTHON_MODULE(vpylm){
 	.def("get_strength_parameters", &PyVPYLM::get_strength_parameters)
 	.def("sample_hyperparameters", &PyVPYLM::sample_hyperparameters)
 	.def("compute_log_Pw", &PyVPYLM::compute_log_Pw)
+	.def("sample_next_word", &PyVPYLM::sample_next_word)
+	.def("save", &PyVPYLM::save)
 	.def("load", &PyVPYLM::load);
 }
