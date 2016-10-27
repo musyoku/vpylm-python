@@ -41,16 +41,21 @@ public:
 		cout << filename << endl;
 	}
 
-	python::list train(python::list &sentence, python::list &prev_order){
+	python::list perform_gibbs_sampling(python::list &sentence, python::list &prev_orders){
 		std::vector<id> word_ids;
 		int len = python::len(sentence);
-		for(int i = 0; i<len; i++) {
+		for(int i = 0;i < len;i++) {
 			word_ids.push_back(python::extract<id>(sentence[i]));
 		}
 
+		if(python::len(prev_orders) != word_ids.size()){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " $prev_ordersと$word_idsの長さが違います\n");
+		}
+
 		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){
-			int n_t = python::extract<int>(prev_order[w_t_i]);
-			if(n_t > 0){
+			int n_t = python::extract<int>(prev_orders[w_t_i]);
+			if(n_t != -1){
 				bool success = vpylm->remove(word_ids, w_t_i, n_t);
 				if(success == false){
 					c_printf("[R]%s", "エラー");
@@ -107,7 +112,7 @@ public:
 BOOST_PYTHON_MODULE(vpylm){
 	python::class_<PyVPYLM>("vpylm")
 	.def("set_g0", &PyVPYLM::set_g0)
-	.def("train", &PyVPYLM::train)
+	.def("perform_gibbs_sampling", &PyVPYLM::perform_gibbs_sampling)
 	.def("get_max_depth", &PyVPYLM::get_max_depth)
 	.def("get_num_child_nodes", &PyVPYLM::get_num_child_nodes)
 	.def("get_num_customers", &PyVPYLM::get_num_customers)

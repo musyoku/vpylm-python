@@ -19,17 +19,18 @@ model = vpylm.vpylm()
 model.set_g0(1.0 / n_vocab)
 
 max_epoch = 100
-train_per_epoch = n_data
 seed = 0
 np.random.seed(seed)
+indices = np.arange(n_data)
 
 for epoch in xrange(1, max_epoch + 1):
 
-	for train in xrange(train_per_epoch):
-		index = np.random.randint(0, n_data)
+	np.random.shuffle(indices)
+	for train_step in xrange(n_data):
+		index = indices[train_step]
 		line = line_list[index]
 		prev_order = prev_order_list[index]
-		new_order = model.train(line, prev_order)
+		new_order = model.perform_gibbs_sampling(line, prev_order)
 		prev_order_list[index] = new_order[:]
 
 	model.sample_hyperparameters()
@@ -46,4 +47,3 @@ for epoch in xrange(1, max_epoch + 1):
 		sum_log_Pw += model.compute_log_Pw(line) / len(line)
 	vpylm_ppl = math.exp(-sum_log_Pw / n_data);
 	print vpylm_ppl
-

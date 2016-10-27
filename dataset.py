@@ -12,6 +12,9 @@ def load(dir):
 	data = []
 	vocab["<eos>"] = 0
 	vocab["<bos>"] = 1
+	for (id, word) in enumerate(vocab):
+		inv_vocab[id] = word
+		
 	for fn in fs:
 		if fn[-4:] == ".txt":
 			liens = codecs.open("%s/%s" % (dir, fn), "r", "utf_8")	# BOMありならutf_8_sig　そうでないならutf_8
@@ -32,6 +35,13 @@ def load(dir):
 	print "文字種:", n_vocab
 	print "行数:", n_data
 	return data, n_vocab, n_data
+
+
+def ids_to_sentence(ids):
+	sentence = ""
+	for id in ids:
+		sentence += id_to_word(id)
+	return sentence
 
 def id_to_word(id):
 	return inv_vocab[id]
