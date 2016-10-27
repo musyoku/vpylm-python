@@ -15,9 +15,9 @@
 #include <stdio.h>
 #include <wchar.h>
 #include <locale>
-#include "node.h"
-#include "vpylm.h"
-#include "vocab.h"
+#include "vpylm/node.h"
+#include "vpylm/vpylm.h"
+#include "vpylm/vocab.h"
 
 using namespace std;
 

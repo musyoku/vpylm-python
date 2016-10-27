@@ -82,8 +82,25 @@ public:
 		return vpylm->numCustomers();
 	}
 
+	python::list get_discount_parameters(){
+		return list_from_vector(vpylm->_d_m);
+	}
+
+	python::list get_strength_parameters(){
+		return list_from_vector(vpylm->_theta_m);
+	}
+
 	void sample_hyperparameters(){
 		vpylm->sampleHyperParams();
+	}
+
+	double compute_log_Pw(python::list &sentence){
+		std::vector<id> word_ids;
+		int len = python::len(sentence);
+		for(int i = 0; i<len; i++) {
+			word_ids.push_back(python::extract<id>(sentence[i]));
+		}
+		return vpylm->log_Pw(word_ids);
 	}
 };
 
@@ -94,6 +111,9 @@ BOOST_PYTHON_MODULE(vpylm){
 	.def("get_max_depth", &PyVPYLM::get_max_depth)
 	.def("get_num_child_nodes", &PyVPYLM::get_num_child_nodes)
 	.def("get_num_customers", &PyVPYLM::get_num_customers)
+	.def("get_discount_parameters", &PyVPYLM::get_discount_parameters)
+	.def("get_strength_parameters", &PyVPYLM::get_strength_parameters)
 	.def("sample_hyperparameters", &PyVPYLM::sample_hyperparameters)
+	.def("compute_log_Pw", &PyVPYLM::compute_log_Pw)
 	.def("load", &PyVPYLM::load);
 }
