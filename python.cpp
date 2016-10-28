@@ -77,8 +77,7 @@ public:
 			new_order.push_back(n_t);
 		}
 
-		python::list new_order_list = list_from_vector(new_order);
-		return new_order_list;
+		return list_from_vector(new_order);
 	}
 
 	int get_max_depth(){
@@ -103,6 +102,23 @@ public:
 
 	void sample_hyperparameters(){
 		vpylm->sampleHyperParams();
+	}
+
+	python::list sample_orders(python::list &sentence){
+		std::vector<id> word_ids;
+		int len = python::len(sentence);
+		for(int i = 0;i < len;i++) {
+			word_ids.push_back(python::extract<id>(sentence[i]));
+		}
+
+		vector<int> new_order;
+		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){
+			int n_t = vpylm->sampleOrder(word_ids, w_t_i);
+			vpylm->add(word_ids, w_t_i, n_t);
+			new_order.push_back(n_t);
+		}
+
+		return list_from_vector(new_order);
 	}
 
 	id sample_next_word(python::list &sentence){
@@ -136,6 +152,7 @@ BOOST_PYTHON_MODULE(vpylm){
 	.def("sample_hyperparameters", &PyVPYLM::sample_hyperparameters)
 	.def("compute_log_Pw", &PyVPYLM::compute_log_Pw)
 	.def("sample_next_word", &PyVPYLM::sample_next_word)
+	.def("sample_orders", &PyVPYLM::sample_orders)
 	.def("save", &PyVPYLM::save)
 	.def("load", &PyVPYLM::load);
 }

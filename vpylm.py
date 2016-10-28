@@ -4,7 +4,18 @@ import math, sys, time, pickle, os
 import vpylm
 import dataset
 
-def generate_words(model):
+# データの読み込み
+split_by = "word"
+line_list, n_vocab, n_data = dataset.load("alice", split_by=split_by, include_whitespace=False)
+
+model = vpylm.vpylm()
+file_exists = model.load()
+if file_exists:
+	print "{} depth - {} nodes - {} customers".format(model.get_max_depth(), model.get_num_child_nodes(), model.get_num_customers())
+
+
+# 文章生成
+def generate_words():
 	sentence = [dataset.word_to_id("<bos>")]
 	for i in xrange(100):
 		next_id = model.sample_next_word(sentence)
@@ -16,13 +27,33 @@ def generate_words(model):
 	str = ""
 	for i in xrange(1, len(sentence) - 1):
 		word = dataset.id_to_word(sentence[i])
-		str += word + " "
+		str += word + (" " if split_by == "word" else "")
 	print str
 
-def train(model):
-	# データの読み込み
-	line_list, n_vocab, n_data = dataset.load("alice", split_by="word", include_whitespace=False)
+# 単語が生成されたn-gramオーダーをサンプリングして表示する
+def visualize_orders():
+	indices = np.arange(n_data)
+	np.random.shuffle(indices)
+	for i in xrange(50):
+		index = indices[i]
+		line = line_list[index]
+		orders = model.sample_orders(line)
+		sentence_str = ""
+		order_str = ""
+		for i, id in enumerate(line[1:-1]):
+			word = dataset.id_to_word(id)
+			if split_by == "word":
+				sentence_str += word + " "
+				order_str += " " * (len(word) // 2) + str(orders[i + 1]) + " " * (len(word) - len(word) // 2)
+			elif split_by == "char" or split_by == "character":
+				sentence_str += word
+				order_str += str(orders[i + 1])
+		print sentence_str
+		print order_str
+		print "\n"
 
+# VPYLMの学習
+def train():
 	# 前回推定したn-gramオーダー
 	if os.path.exists("prev_orders.dump"):
 		with open("prev_orders.dump", "rb") as f:
@@ -37,7 +68,7 @@ def train(model):
 
 	model.set_g0(1.0 / n_vocab)
 
-	max_epoch = 50
+	max_epoch = 1000
 	seed = 0
 	np.random.seed(seed)
 	indices = np.arange(n_data)
@@ -70,6 +101,12 @@ def train(model):
 		print "{:.2f} lines / sec - {:.2f} ppl - {} depth - {} nodes - {} customers".format(lines_per_sec, vpylm_ppl, model.get_max_depth(), model.get_num_child_nodes(), model.get_num_customers())
 		# print model.get_discount_parameters()
 		# print model.get_strength_parameters()
+
+		if epoch % 100 == 0:
+			model.save()
+			with open("prev_orders.dump", "wb") as f:
+				pickle.dump(prev_order_list, f)
+
 	model.save()
 	with open("prev_orders.dump", "wb") as f:
 		pickle.dump(prev_order_list, f)
@@ -92,12 +129,14 @@ def show_progress(step, total):
 	sys.stdout.write("{}] {}%{}".format(str, int(progress * 100.0), ret))
 	sys.stdout.flush()
 
-if __name__ == "__main__":
-	model = vpylm.vpylm()
-	file_exists = model.load()
-	if file_exists:
-		print "{} depth - {} nodes - {} customers".format(model.get_max_depth(), model.get_num_child_nodes(), model.get_num_customers())
-		
-	train(model)
+def main():
+	# train()
+
 	for n in xrange(100):
-		generate_words(model)
+		generate_words()
+
+	visualize_orders()
+
+if __name__ == "__main__":
+	main()
+

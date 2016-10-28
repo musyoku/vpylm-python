@@ -24,7 +24,7 @@ def load(dir, split_by="word", include_whitespace=False):
 				ids = []
 
 				# 文字n-gramの場合
-				if split_by == "char":
+				if split_by == "char" or split_by == "character":
 					for i in xrange(len(line)):
 						word = line[i]
 						if include_whitespace == False and word == " ":
