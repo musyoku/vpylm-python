@@ -155,7 +155,10 @@ public:
 		}
 		return sum;
 	}
-	Node* findChildWithId(int id){
+	Node* findChildWithId(int id, bool generate_if_needed = false){
+		if(generate_if_needed){
+			return generateChildIfNeeded(id);
+		}
 		auto itr = _children.find(id);
 		if (itr == _children.end()) {
 			return NULL;

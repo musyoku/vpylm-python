@@ -56,7 +56,7 @@ public:
 		_root = new Node(0);
 		_root->_depth = 0;	// ルートは深さ0
 
-		for(int n = 0;n <= _max_depth;n++){
+		for(int n = 0;n < ngram;n++){
 			_d_m.push_back(PYLM_INITIAL_D);	
 			_theta_m.push_back(PYLM_INITIAL_THETA);
 			_a_m.push_back(PYLM_INITIAL_A);	
@@ -66,63 +66,36 @@ public:
 		}
 	}
 
-	// 単語列のi番目の単語をモデルに追加
-	void add(vector<id> &token_ids, int token_t_index){
-		// HPYLMでは深さは固定
-		if(token_t_index < _max_depth){
+	// 単語列のindex番目の単語をモデルに追加
+	bool add(vector<id> &token_ids, int token_t_index){
+		Node* node = findNodeByTracingBackContext(token_ids, token_t_index, true);
+		if(node == NULL){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 客を追加できません. $token_t_index < $_max_depth\n");
-			return;
-		}
-
-		id token_t = token_ids[token_t_index];
-		
-		// ノードをたどっていく
-		// なければ作る
-		Node* node = _root;
-		for(int depth = 0;depth < _max_depth;depth++){
-			id u_t = token_ids[token_t_index - depth - 1];
-			Node* child = node->generateChildIfNeeded(u_t);
-			if(child == NULL){
-				c_printf("[R]%s", "エラー");
-				c_printf("[n]%s", " レストランが存在しません. $child == NULL\n");
-				return;
-			}
-			node = child;
-		}
-
-		// "客が親から生成される確率"と自らが持つ経験分布の混合分布から次の客の座るテーブルが決まる
-		double parent_p_w = _g0;
-		if(node->parentExists()){
-			parent_p_w = node->_parent->Pw(token_t, _g0, _d_m, _theta_m);
-		}
-		node->addCustomer(token_t, parent_p_w, _d_m, _theta_m);
-	}
-
-	bool remove(vector<id> &token_ids, int w_t_i){
-		// HPYLMでは深さは固定
-		if(w_t_i < _max_depth){
-			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 客を除去できません. $w_t_i < $_max_depth\n");
+			c_printf("[n]%s", " 客を追加できません. ノードが見つかりません.\n");
 			return false;
 		}
 
-		id w_t = token_ids[w_t_i];
+		id token_t = token_ids[token_t_index];
 
-		Node* node = _root;
-		for(int depth = 0;depth < _max_depth;depth++){
-			id u_t = token_ids[w_t_i - depth - 1];
-			Node* child = node->findChildWithId(u_t);
-			if(child == NULL){
-				c_printf("[R]%s", "エラー");
-				c_printf("[n]%s", " 客を除去できません. $child == NULL\n");
-				return false;
-			}
-			node = child;
+		// "客が親から生成される確率"と自らが持つ経験分布の混合分布から次の客の座るテーブルが決まる
+		double parent_Pw = _g0;
+		if(node->parentExists()){
+			parent_Pw = node->_parent->Pw(token_t, _g0, _d_m, _theta_m);
+		}
+		node->addCustomer(token_t, parent_Pw, _d_m, _theta_m);
+		return false;
+	}
+
+	bool remove(vector<id> &token_ids, int token_t_index){
+		Node* node = findNodeByTracingBackContext(token_ids, token_t_index, false);
+		if(node == NULL){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 客を除去できません. ノードが見つかりません.\n");
+			return false;
 		}
 
-		bool need_to_remove_from_parent = false;
-		node->removeCustomer(w_t);
+		id token_t = token_ids[token_t_index];
+		node->removeCustomer(token_t);
 
 		if(node->parentExists() && node->needToRemoveFromParent()){
 			// 客が一人もいなくなったらノードを削除する
@@ -131,133 +104,144 @@ public:
 		return true;
 	}
 
-	double Pw_h(vector<id> &token_ids, vector<id> context_ids){
+	// 文脈を後ろ向きに_max_depthだけ辿る
+	Node* findNodeByTracingBackContext(vector<id> &token_ids, int token_t_index, bool generate_node_if_needed = false){
+		// HPYLMでは深さは固定
+		if(token_t_index < _max_depth){
+			return NULL;
+		}
+
+		Node* node = _root;
+		for(int depth = 0;depth < _max_depth;depth++){
+			id context_token_id = token_ids[token_t_index - depth - 1];
+			Node* child = node->findChildWithId(context_token_id, generate_node_if_needed);
+			if(child == NULL){
+				return NULL;
+			}
+			node = child;
+		}
+		return node;
+	}
+
+	double Pw_h(vector<id> &token_ids, vector<id> context_token_ids){
 		double p = 1;
 		for(int n = 0;n < token_ids.size();n++){
-			p *= Pw_h(token_ids[n], context_ids);
-			context_ids.push_back(token_ids[n]);
+			p *= Pw_h(token_ids[n], context_token_ids);
+			context_token_ids.push_back(token_ids[n]);
 		}
 		return p;
 	}
 
-	double Pw_h(id word_id, vector<id> &context_ids){
+	double Pw_h(id token_id, vector<id> &context_token_ids){
 		// HPYLMでは深さは固定
-		if(context_ids.size() < _max_depth){
+		if(context_token_ids.size() < _max_depth){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 単語確率を計算できません. $context_ids.size() < $_max_depth\n");
+			c_printf("[n]%s", " 単語確率を計算できません. $context_token_ids.size() < $_max_depth\n");
 			return -1;
 		}
 
-		Node* node = _root;
-		for(int n = 0;n < _max_depth;n++){
-			id u_t = context_ids[context_ids.size() - n - 1];
-			Node* child = node->findChildWithId(u_t);
-			if(child == NULL){
-				c_printf("[R]%s", "エラー");
-				c_printf("[n]%s", " 単語確率を計算できません. $child == NULL\n");
-				return -1;
-			}
-			node = child;
+		Node* node = findNodeByTracingBackContext(context_token_ids, token_id, false);
+		if(node == NULL){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 単語確率を計算できません. $node == NULL\n");
+			return -1;
 		}
 
-		return node->Pw(word_id, _g0, _d_m, _theta_m);
+		return node->Pw(token_id, _g0, _d_m, _theta_m);
 	}
 
-	double Pw(id word_id){
-		double p = _root->Pw(word_id, _g0, _d_m, _theta_m);
-		return p;
+	double Pw(id token_id){
+		return _root->Pw(token_id, _g0, _d_m, _theta_m);
 	}
 
 	double Pw(vector<id> &token_ids){
-		if(token_ids.size() == 0){
-			return 0;
+		if(token_ids.size() < _max_depth + 1){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 単語確率を計算できません. $token_ids.size() < $_max_depth\n");
+			return -1;
 		}
-		double p = 1;
-		vector<id> context_ids(token_ids.begin(), token_ids.begin() + _max_depth);
+		double mul_Pw_h = 1;
+		vector<id> context_token_ids(token_ids.begin(), token_ids.begin() + _max_depth);
 		for(int depth = _max_depth;depth < token_ids.size();depth++){
-			id word_id = token_ids[depth];
-			double _p = Pw_h(word_id, context_ids);
-			p *= _p;
-			context_ids.push_back(word_id);
+			id token_id = token_ids[depth];
+			mul_Pw_h *= Pw_h(token_id, context_token_ids);;
+			context_token_ids.push_back(token_id);
 		}
-		return p;
+		return mul_Pw_h;
 	}
+
 	double log_Pw(vector<id> &token_ids){
-		if(token_ids.size() == 0){
-			return 0;
+		if(token_ids.size() < _max_depth + 1){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 単語確率を計算できません. $token_ids.size() < $_max_depth\n");
+			return -1;
 		}
-		double p = 0;
-		vector<id> context_ids(token_ids.begin(), token_ids.begin() + _max_depth);
+		double sum_Pw_h = 0;
+		vector<id> context_token_ids(token_ids.begin(), token_ids.begin() + _max_depth);
 		for(int depth = _max_depth;depth < token_ids.size();depth++){
-			id word_id = token_ids[depth];
-			double _p = Pw_h(word_id, context_ids);
-			p += log(_p + 1e-10);
-			context_ids.push_back(word_id);
+			id token_id = token_ids[depth];
+			double prob = Pw_h(token_id, context_token_ids);
+			sum_Pw_h += log(prob + 1e-10);
+			context_token_ids.push_back(token_id);
 		}
-		return p;
+		return sum_Pw_h;
 	}
 
 	double log2_Pw(vector<id> &token_ids){
-		if(token_ids.size() == 0){
-			return 0;
+		if(token_ids.size() < _max_depth + 1){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 単語確率を計算できません. $token_ids.size() < $_max_depth\n");
+			return -1;
 		}
-		double p = 0;
-		vector<id> context_ids(token_ids.begin(), token_ids.begin() + _max_depth);
+		double sum_Pw_h = 0;
+		vector<id> context_token_ids(token_ids.begin(), token_ids.begin() + _max_depth);
 		for(int depth = _max_depth;depth < token_ids.size();depth++){
-			id word_id = token_ids[depth];
-			double _p = Pw_h(word_id, context_ids);
-			p += log2(_p + 1e-10);
-			context_ids.push_back(word_id);
+			id token_id = token_ids[depth];
+			double prob = Pw_h(token_id, context_token_ids);
+			sum_Pw_h += log2(prob + 1e-10);
+			context_token_ids.push_back(token_id);
 		}
-		return p;
+		return sum_Pw_h;
 	}
 
-	id sampleNextWord(vector<id> &context_ids, id eos_id){
-		Node* node = _root;
-		int depth = context_ids.size() < _max_depth ? context_ids.size() : _max_depth;
-
-		for(int n = 0;n < depth;n++){
-			id u_t = context_ids[context_ids.size() - n - 1];
-			if(node == NULL){
-				break;
-			}
-			Node* child = node->findChildWithId(u_t);
-			if(child == NULL){
-				break;
-			}
-			node = child;
+	id sampleNextToken(vector<id> &context_token_ids, id eos_id){
+		Node* node = findNodeByTracingBackContext(context_token_ids, context_token_ids.size() - 1, false);
+		if(node == NULL){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " トークンを生成できません. ノードが見つかりません.\n");
+			return eos_id;
 		}
 
 		vector<id> token_ids;
 		vector<double> probs;
-		double sum = 0;
+		double sum_probs = 0;
 		for(auto elem: node->_arrangement){
-			id word_id = elem.first;
-			double p = Pw_h(word_id, context_ids);
-			if(p > 0){
-				token_ids.push_back(word_id);
-				probs.push_back(p);
-				sum += p;
+			id token_id = elem.first;
+			double prob = Pw_h(token_id, context_token_ids);
+			if(prob > 0){
+				token_ids.push_back(token_id);
+				probs.push_back(prob);
+				sum_probs += prob;
 			}
 		}
 		if(token_ids.size() == 0){
 			return eos_id;
 		}
-		if(sum == 0){
+		if(sum_probs == 0){
 			return eos_id;
 		}
-		double ratio = 1.0 / sum;
+		double ratio = 1.0 / sum_probs;
 		double r = Sampler::uniform(0, 1);
-		sum = 0;
-		id sampled_word_id = token_ids.back();
+		sum_probs = 0;
+		id sampled_token_id = token_ids.back();
 		for(int i = 0;i < token_ids.size();i++){
-			sum += probs[i] * ratio;
-			if(sum > r){
-				sampled_word_id = token_ids[i];
+			sum_probs += probs[i] * ratio;
+			if(sum_probs > r){
+				sampled_token_id = token_ids[i];
 				break;
 			}
 		}
-		return sampled_word_id;
+		return sampled_token_id;
 	}
 
 
