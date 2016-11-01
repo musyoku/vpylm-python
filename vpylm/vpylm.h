@@ -46,6 +46,7 @@ public:
 		_beta_stop = 4;
 		_beta_pass = 1;
 	}
+	
 	// n_tはw_tから見た深さ
 	bool add(vector<id> &context, int w_t_i, int n_t){
 		if(n_t > w_t_i){

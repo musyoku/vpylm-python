@@ -7,6 +7,7 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/vector.hpp>
+#include "c_printf.h"
 #include "sampler.h"
 #include "node.h"
 #include "const.h"
@@ -16,6 +17,7 @@ class HPYLM{
 private:
 	friend class boost::serialization::access;
 	template <class Archive>
+	// モデルの保存
 	void serialize(Archive& archive, unsigned int version)
 	{
 		static_cast<void>(version); // No use
@@ -31,20 +33,20 @@ private:
 	}
 public:
 	Node* _root;				// 文脈木のルートノード
-	int _max_depth;				// 深さ
+	int _max_depth;				// 最大の深さ
 	int _bottom;				// VPYLMへ拡張時に使う
 	double _g0;					// ゼログラム確率
 
 	// 深さmのノードに関するパラメータ
-	vector<double> _d_m;		// Pitman-Yor過程のディスカウント
+	vector<double> _d_m;		// Pitman-Yor過程のディスカウント係数
 	vector<double> _theta_m;	// Pitman-Yor過程の集中度
 
 	// "A Bayesian Interpretation of Interpolated Kneser-Ney" Appendix C参照
 	// http://www.gatsby.ucl.ac.uk/~ywteh/research/compling/hpylm.pdf
-	vector<double> _a_m;		// Beta分布のパラメータ	dの推定用
-	vector<double> _b_m;		// Beta分布のパラメータ	dの推定用
-	vector<double> _alpha_m;	// Gamma分布のパラメータ	θの推定用
-	vector<double> _beta_m;		// Gamma分布のパラメータ	θの推定用
+	vector<double> _a_m;		// ベータ分布のパラメータ	dの推定用
+	vector<double> _b_m;		// ベータ分布のパラメータ	dの推定用
+	vector<double> _alpha_m;	// ガンマ分布のパラメータ	θの推定用
+	vector<double> _beta_m;		// ガンマ分布のパラメータ	θの推定用
 
 	HPYLM(int ngram = 2){
 		// 深さは0から始まることに注意
@@ -63,82 +65,101 @@ public:
 			_beta_m.push_back(PYLM_INITIAL_BETA);
 		}
 	}
-	void add(id word_id){
-		_root->addCustomer(word_id, _g0, _d_m, _theta_m);
-	}
-	void add(vector<id> &word_ids, int w_t_i){
-		id w_t = word_ids[w_t_i];
-		// HPYLMでは深さは固定
-		// ただし先頭の文字などmax_depthに満たない例外はある
-		int max_depth = w_t_i > _max_depth ? _max_depth : w_t_i;
 
+	// 単語列のi番目の単語をモデルに追加
+	void add(vector<id> &token_ids, int token_t_index){
+		// HPYLMでは深さは固定
+		if(token_t_index < _max_depth){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 客を追加できません. $token_t_index < $_max_depth\n");
+			return;
+		}
+
+		id token_t = token_ids[token_t_index];
+		
+		// ノードをたどっていく
+		// なければ作る
 		Node* node = _root;
-		for(int depth = 0;depth < max_depth;depth++){
-			id u_t = word_ids[w_t_i - depth - 1];
+		for(int depth = 0;depth < _max_depth;depth++){
+			id u_t = token_ids[token_t_index - depth - 1];
 			Node* child = node->generateChildIfNeeded(u_t);
 			if(child == NULL){
-				printf("\x1b[41;97m");
-				printf("WARNING");
-				printf("\x1b[49;39m");
-				printf(" Unexpected error occurred.\n");
+				c_printf("[R]%s", "エラー");
+				c_printf("[n]%s", " レストランが存在しません. $child == NULL\n");
 				return;
 			}
 			node = child;
 		}
+
+		// "客が親から生成される確率"と自らが持つ経験分布の混合分布から次の客の座るテーブルが決まる
 		double parent_p_w = _g0;
-		if(node->_parent){
-			parent_p_w = node->_parent->Pw(w_t, _g0, _d_m, _theta_m);
+		if(node->parentExists()){
+			parent_p_w = node->_parent->Pw(token_t, _g0, _d_m, _theta_m);
 		}
-		node->addCustomer(w_t, parent_p_w, _d_m, _theta_m);
+		node->addCustomer(token_t, parent_p_w, _d_m, _theta_m);
 	}
 
-	bool remove(vector<id> &word_ids, int w_t_i){
-		id w_t = word_ids[w_t_i];
-		int max_depth = w_t_i > _max_depth ? _max_depth : w_t_i;
+	bool remove(vector<id> &token_ids, int w_t_i){
+		// HPYLMでは深さは固定
+		if(w_t_i < _max_depth){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 客を除去できません. $w_t_i < $_max_depth\n");
+			return false;
+		}
+
+		id w_t = token_ids[w_t_i];
+
 		Node* node = _root;
-		for(int depth = 0;depth < max_depth;depth++){
-			id u_t = word_ids[w_t_i - depth - 1];
+		for(int depth = 0;depth < _max_depth;depth++){
+			id u_t = token_ids[w_t_i - depth - 1];
 			Node* child = node->findChildWithId(u_t);
 			if(child == NULL){
+				c_printf("[R]%s", "エラー");
+				c_printf("[n]%s", " 客を除去できません. $child == NULL\n");
 				return false;
 			}
 			node = child;
 		}
-		// node->removeCustomer(w_t);
-		bool should_remove_from_parent = false;
-		node->removeCustomer(w_t, should_remove_from_parent);
-		if(should_remove_from_parent && node->_parent != NULL){
+
+		bool need_to_remove_from_parent = false;
+		node->removeCustomer(w_t);
+
+		if(node->parentExists() && node->needToRemoveFromParent()){
+			// 客が一人もいなくなったらノードを削除する
 			node->_parent->deleteChildWithId(node->_id);
 		}
 		return true;
 	}
 
-	double Pw_h(vector<id> &word_ids, vector<id> context_ids){
+	double Pw_h(vector<id> &token_ids, vector<id> context_ids){
 		double p = 1;
-		for(int n = 0;n < word_ids.size();n++){
-			p *= Pw_h(word_ids[n], context_ids);
-			context_ids.push_back(word_ids[n]);
+		for(int n = 0;n < token_ids.size();n++){
+			p *= Pw_h(token_ids[n], context_ids);
+			context_ids.push_back(token_ids[n]);
 		}
 		return p;
 	}
 
 	double Pw_h(id word_id, vector<id> &context_ids){
-		// どの深さまでノードが存在するかを調べる
-		Node* node = _root;
-		int depth = context_ids.size() < _max_depth ? context_ids.size() : _max_depth;
+		// HPYLMでは深さは固定
+		if(context_ids.size() < _max_depth){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 単語確率を計算できません. $context_ids.size() < $_max_depth\n");
+			return -1;
+		}
 
-		for(int n = 0;n < depth;n++){
+		Node* node = _root;
+		for(int n = 0;n < _max_depth;n++){
 			id u_t = context_ids[context_ids.size() - n - 1];
-			// cout << "u_t: " << u_t << endl;
-			if(node == NULL){
-				break;
-			}
 			Node* child = node->findChildWithId(u_t);
 			if(child == NULL){
-				break;
+				c_printf("[R]%s", "エラー");
+				c_printf("[n]%s", " 単語確率を計算できません. $child == NULL\n");
+				return -1;
 			}
 			node = child;
 		}
+
 		return node->Pw(word_id, _g0, _d_m, _theta_m);
 	}
 
@@ -147,28 +168,43 @@ public:
 		return p;
 	}
 
-	double Pw(vector<id> &word_ids){
-		if(word_ids.size() == 0){
+	double Pw(vector<id> &token_ids){
+		if(token_ids.size() == 0){
 			return 0;
 		}
 		double p = 1;
-		vector<id> context_ids(word_ids.begin(), word_ids.begin() + _max_depth);
-		for(int depth = _max_depth;depth < word_ids.size();depth++){
-			id word_id = word_ids[depth];
+		vector<id> context_ids(token_ids.begin(), token_ids.begin() + _max_depth);
+		for(int depth = _max_depth;depth < token_ids.size();depth++){
+			id word_id = token_ids[depth];
 			double _p = Pw_h(word_id, context_ids);
 			p *= _p;
 			context_ids.push_back(word_id);
 		}
 		return p;
 	}
-	double log_Pw(vector<id> &word_ids){
-		if(word_ids.size() == 0){
+	double log_Pw(vector<id> &token_ids){
+		if(token_ids.size() == 0){
 			return 0;
 		}
 		double p = 0;
-		vector<id> context_ids(word_ids.begin(), word_ids.begin() + _max_depth);
-		for(int depth = _max_depth;depth < word_ids.size();depth++){
-			id word_id = word_ids[depth];
+		vector<id> context_ids(token_ids.begin(), token_ids.begin() + _max_depth);
+		for(int depth = _max_depth;depth < token_ids.size();depth++){
+			id word_id = token_ids[depth];
+			double _p = Pw_h(word_id, context_ids);
+			p += log(_p + 1e-10);
+			context_ids.push_back(word_id);
+		}
+		return p;
+	}
+
+	double log2_Pw(vector<id> &token_ids){
+		if(token_ids.size() == 0){
+			return 0;
+		}
+		double p = 0;
+		vector<id> context_ids(token_ids.begin(), token_ids.begin() + _max_depth);
+		for(int depth = _max_depth;depth < token_ids.size();depth++){
+			id word_id = token_ids[depth];
 			double _p = Pw_h(word_id, context_ids);
 			p += log2(_p + 1e-10);
 			context_ids.push_back(word_id);
@@ -192,19 +228,19 @@ public:
 			node = child;
 		}
 
-		vector<id> word_ids;
+		vector<id> token_ids;
 		vector<double> probs;
 		double sum = 0;
 		for(auto elem: node->_arrangement){
 			id word_id = elem.first;
 			double p = Pw_h(word_id, context_ids);
 			if(p > 0){
-				word_ids.push_back(word_id);
+				token_ids.push_back(word_id);
 				probs.push_back(p);
 				sum += p;
 			}
 		}
-		if(word_ids.size() == 0){
+		if(token_ids.size() == 0){
 			return eos_id;
 		}
 		if(sum == 0){
@@ -213,11 +249,11 @@ public:
 		double ratio = 1.0 / sum;
 		double r = Sampler::uniform(0, 1);
 		sum = 0;
-		id sampled_word_id = word_ids.back();
-		for(int i = 0;i < word_ids.size();i++){
+		id sampled_word_id = token_ids.back();
+		for(int i = 0;i < token_ids.size();i++){
 			sum += probs[i] * ratio;
 			if(sum > r){
-				sampled_word_id = word_ids[i];
+				sampled_word_id = token_ids[i];
 				break;
 			}
 		}
@@ -331,6 +367,10 @@ public:
 
 	void setActiveKeys(unordered_map<id, bool> &keys){
 		_root->setActiveKeys(keys);
+	}
+
+	void countNodeForEachDepth(unordered_map<id, int> &map){
+		_root->countNodeForEachDepth(map);
 	}
 
 	void save(string dir = "model/"){

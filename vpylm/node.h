@@ -72,8 +72,7 @@ private:
 			}
 			if(tables[k] == 0){
 				if(_parent != NULL){
-					bool should_remove_from_parent = false;
-					_parent->removeCustomer(word_id, should_remove_from_parent, false);
+					_parent->removeCustomer(word_id, false);
 				}
 				tables.erase(tables.begin() + k);
 				_num_tables--;
@@ -127,8 +126,17 @@ public:
 		_id = word_id;
 		_parent = NULL;
 	}
+	bool parentExists(){
+		return !(_parent == NULL);
+	}
 	bool childExists(int id){
 		return !(_children.find(id) == _children.end());
+	}
+	bool needToRemoveFromParent(){
+		if(_children.size() == 0 and _arrangement.size() == 0){
+			return true;
+		}
+		return false;
 	}
 	int numTablesServingWord(int id){
 		if(_arrangement.find(id) == _arrangement.end()){
@@ -226,8 +234,7 @@ public:
 		}
 	}
 
-	bool removeCustomer(id word_id, bool &should_remove_from_parent, bool update_n = true){
-		should_remove_from_parent = false;
+	bool removeCustomer(id word_id, bool update_n = true){
 		if(_arrangement.find(word_id) == _arrangement.end()){
 			return false;
 		}
@@ -254,9 +261,6 @@ public:
 				if(update_n == true){
 					decrementStopCount();
 				}
-				if(_children.size() == 0 and _arrangement.size() == 0){
-					should_remove_from_parent = true;
-				}
 				return true;
 			}
 		}
@@ -268,10 +272,6 @@ public:
 		}
 		if(update_n == true){
 			decrementStopCount();
-		}
-
-		if(_children.size() == 0 and _arrangement.size() == 0){
-			should_remove_from_parent = true;
 		}
 		return true;
 	}
@@ -453,6 +453,16 @@ public:
 		}
 		for(auto elem: _children){
 			elem.second->setActiveKeys(keys);
+		}
+	}
+
+	void countNodeForEachDepth(unordered_map<id, int> &map){
+		for(auto elem: _arrangement){
+			id word_id = elem.first;
+			map[_depth + 1] += 1;
+		}
+		for(auto elem: _children){
+			elem.second->countNodeForEachDepth(map);
 		}
 	}
 

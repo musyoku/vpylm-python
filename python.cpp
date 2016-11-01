@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <unordered_map> 
 #include <boost/python.hpp>
 #include "vpylm/c_printf.h"
 #include "vpylm/node.h"
@@ -92,6 +93,23 @@ public:
 		return vpylm->numCustomers();
 	}
 
+	python::list get_node_count_for_each_depth(){
+		unordered_map<id, int> map;
+		vpylm->countNodeForEachDepth(map);
+
+		std::vector<int> counts;
+		std::map<int, int> ordered(map.begin(), map.end());
+		
+		// 0-gram
+		counts.push_back(0);
+
+		for(auto it = ordered.begin(); it != ordered.end(); ++it){
+			counts.push_back(it->second);
+		}
+
+		return list_from_vector(counts);
+	}
+
 	python::list get_discount_parameters(){
 		return list_from_vector(vpylm->_d_m);
 	}
@@ -153,6 +171,7 @@ BOOST_PYTHON_MODULE(vpylm){
 	.def("compute_log_Pw", &PyVPYLM::compute_log_Pw)
 	.def("sample_next_word", &PyVPYLM::sample_next_word)
 	.def("sample_orders", &PyVPYLM::sample_orders)
+	.def("get_node_count_for_each_depth", &PyVPYLM::get_node_count_for_each_depth)
 	.def("save", &PyVPYLM::save)
 	.def("load", &PyVPYLM::load);
 }

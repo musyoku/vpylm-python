@@ -5,8 +5,8 @@ import vpylm
 import dataset
 
 # データの読み込み
-split_by = "word"
-line_list, n_vocab, n_data = dataset.load("alice", split_by=split_by, include_whitespace=False)
+split_by = "char"
+line_list, n_vocab, n_data = dataset.load("beluga", split_by=split_by, include_whitespace=False)
 
 model = vpylm.vpylm()
 file_exists = model.load()
@@ -52,6 +52,14 @@ def visualize_orders():
 		print order_str
 		print "\n"
 
+# n-gramオーダーのデータでの分布を可視化
+def visualize_ngram_occurrences():
+	counts = model.get_node_count_for_each_depth()
+	max_count = max(counts)
+	for n, count in enumerate(counts):
+		print n, "#" * int(math.ceil(count / float(max_count) * 30)), count
+
+
 # VPYLMの学習
 def train():
 	# 前回推定したn-gramオーダー
@@ -90,15 +98,16 @@ def train():
 
 		model.sample_hyperparameters()
 
-		# パープレキシティを計算
-		sum_log_Pw = 0
-		for index in xrange(n_data):
-			line = line_list[index]
-			sum_log_Pw += model.compute_log_Pw(line) / len(line)
-		vpylm_ppl = math.exp(-sum_log_Pw / n_data);
+		if epoch % 20 == 0:
+			# パープレキシティを計算
+			sum_log_Pw = 0
+			for index in xrange(n_data):
+				line = line_list[index]
+				sum_log_Pw += model.compute_log_Pw(line) / len(line)
+			vpylm_ppl = math.exp(-sum_log_Pw / n_data);
 
-		lines_per_sec = n_data / float(time.time() - start_time)
-		print "{:.2f} lines / sec - {:.2f} ppl - {} depth - {} nodes - {} customers".format(lines_per_sec, vpylm_ppl, model.get_max_depth(), model.get_num_child_nodes(), model.get_num_customers())
+			lines_per_sec = n_data / float(time.time() - start_time)
+			print "{:.2f} lines / sec - {:.2f} ppl - {} depth - {} nodes - {} customers".format(lines_per_sec, vpylm_ppl, model.get_max_depth(), model.get_num_child_nodes(), model.get_num_customers())
 		# print model.get_discount_parameters()
 		# print model.get_strength_parameters()
 
@@ -115,7 +124,7 @@ def show_progress(step, total):
 	progress = step / float(total - 1)
 	barWidth = 70;
 	str = "["
-	pos = barWidth * progress;
+	pos = int(barWidth * progress);
 	for i in xrange(barWidth):
 		if i < pos:
 			str += "="
@@ -130,12 +139,14 @@ def show_progress(step, total):
 	sys.stdout.flush()
 
 def main():
-	# train()
+	train()
 
 	for n in xrange(100):
 		generate_words()
 
-	visualize_orders()
+	# visualize_orders()
+
+	visualize_ngram_occurrences()
 
 if __name__ == "__main__":
 	main()
