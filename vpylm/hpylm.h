@@ -237,13 +237,44 @@ public:
 		for(int i = 0;i < token_ids.size();i++){
 			sum_probs += probs[i] * ratio;
 			if(sum_probs > r){
-				sampled_token_id = token_ids[i];
-				break;
+				return token_ids[i];
 			}
 		}
 		return sampled_token_id;
 	}
 
+	void initHyperparametersAtDepthIfNeeded(int depth){
+		if(depth >= _d_m.size()){
+			while(_d_m.size() <= depth){
+				_d_m.push_back(PYLM_INITIAL_D);
+			}
+		}
+		if(depth >= _theta_m.size()){
+			while(_theta_m.size() <= depth){
+				_theta_m.push_back(PYLM_INITIAL_THETA);
+			}
+		}
+		if(depth >= _a_m.size()){
+			while(_a_m.size() <= depth){
+				_a_m.push_back(PYLM_INITIAL_A);
+			}
+		}
+		if(depth >= _b_m.size()){
+			while(_b_m.size() <= depth){
+				_b_m.push_back(PYLM_INITIAL_B);
+			}
+		}
+		if(depth >= _alpha_m.size()){
+			while(_alpha_m.size() <= depth){
+				_alpha_m.push_back(PYLM_INITIAL_ALPHA);
+			}
+		}
+		if(depth >= _beta_m.size()){
+			while(_beta_m.size() <= depth){
+				_beta_m.push_back(PYLM_INITIAL_BETA);
+			}
+		}
+	}
 
 	// "A Bayesian Interpretation of Interpolated Kneser-Ney" Appendix C参照
 	// http://www.gatsby.ucl.ac.uk/~ywteh/research/compling/hpylm.pdf
@@ -255,16 +286,7 @@ public:
 			if(depth > _bottom){
 				_bottom = depth;
 			}
-			if(depth >= _d_m.size()){
-				while(_d_m.size() <= depth){
-					_d_m.push_back(PYLM_INITIAL_D);
-				}
-			}
-			if(depth >= _theta_m.size()){
-				while(_theta_m.size() <= depth){
-					_theta_m.push_back(PYLM_INITIAL_THETA);
-				}
-			}
+			initHyperparametersAtDepthIfNeeded(depth);
 
 			double d = _d_m[depth];
 			double theta = _theta_m[depth];
@@ -297,35 +319,18 @@ public:
 
 		// それ以外
 		_bottom = 0;
+		// _bottomは以下を実行すると更新される
 		sumAuxiliaryVariablesRecursively(_root, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m);
+		initHyperparametersAtDepthIfNeeded(_bottom);
 
 		for(int u = 0;u <= _bottom;u++){
-
-			if(u >= _a_m.size()){
-				while(_a_m.size() <= u){
-					_a_m.push_back(PYLM_INITIAL_A);
-				}
-			}
-			if(u >= _b_m.size()){
-				while(_b_m.size() <= u){
-					_b_m.push_back(PYLM_INITIAL_B);
-				}
-			}
-			if(u >= _alpha_m.size()){
-				while(_alpha_m.size() <= u){
-					_alpha_m.push_back(PYLM_INITIAL_ALPHA);
-				}
-			}
-			if(u >= _beta_m.size()){
-				while(_beta_m.size() <= u){
-					_beta_m.push_back(PYLM_INITIAL_BETA);
-				}
-			}
-			
 			_d_m[u] = Sampler::beta(_a_m[u] + sum_1_y_ui_m[u], _b_m[u] + sum_1_z_uwkj_m[u]);
+			// 2番目の引数は逆数を渡すことに注意
 			_theta_m[u] = Sampler::gamma(_alpha_m[u] + sum_y_ui_m[u], 1 / (_beta_m[u] - sum_log_x_u_m[u]));
 		}
 
+		// 不要な深さのハイパーパラメータを削除
+		// この操作は不要かもしれない
 		int num_remove = _d_m.size() - _bottom;
 		for(int n = 0;n < num_remove;n++){
 			_d_m.pop_back();

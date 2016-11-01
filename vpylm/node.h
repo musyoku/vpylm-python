@@ -22,65 +22,65 @@ using namespace std;
 
 class Node{
 private:
-	bool addCustomerToEmptyArrangementWithId(id word_id, double parent_p_w, vector<double> &d_m, vector<double> &theta_m){
-		if(_arrangement.find(word_id) == _arrangement.end()){
+	bool addCustomerToEmptyArrangement(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
+		if(_arrangement.find(token_id) == _arrangement.end()){
 			vector<int> tables = {1};
-			_arrangement[word_id] = tables;
+			_arrangement[token_id] = tables;
 			_num_customers++;
 			_num_tables++;
 			if(_parent != NULL){
-				_parent->addCustomer(word_id, parent_p_w, d_m, theta_m, false);
+				_parent->addCustomer(token_id, parent_Pw, d_m, theta_m, false);
 			}
 			return true;
 		}
 		return false;
 	}
-	bool addCustomerWithIdAndTable(id word_id, int k, double parent_p_w, vector<double> &d_m, vector<double> &theta_m){
-		if(_arrangement.find(word_id) == _arrangement.end()){
-			return addCustomerToEmptyArrangementWithId(word_id, parent_p_w, d_m, theta_m);
+	bool addCustomerToTable(id token_id, int table_k, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
+		if(_arrangement.find(token_id) == _arrangement.end()){
+			return addCustomerToEmptyArrangement(token_id, parent_Pw, d_m, theta_m);
 		}
-		if(k < _arrangement[word_id].size()){
-			_arrangement[word_id][k]++;
+		if(table_k < _arrangement[token_id].size()){
+			_arrangement[token_id][table_k]++;
 			_num_customers++;
 			return true;
 		}
 		return false;
 	}
-	bool addCustomerToNewTableWithId(id word_id, double parent_p_w, vector<double> &d_m, vector<double> &theta_m){
-		_arrangement[word_id].push_back(1);
+	bool addCustomerToNewTable(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
+		_arrangement[token_id].push_back(1);
 		_num_tables++;
 		_num_customers++;
 		if(_parent != NULL){
-			_parent->addCustomer(word_id, parent_p_w, d_m, theta_m, false);
+			_parent->addCustomer(token_id, parent_Pw, d_m, theta_m, false);
 		}
 		return true;
 	}
-	bool removeCustomerWithIdAndTable(id word_id, int k){
-		if(_arrangement.find(word_id) == _arrangement.end()){
+	bool removeCustomerFromTable(id token_id, int table_k){
+		if(_arrangement.find(token_id) == _arrangement.end()){
 			return false;
 		}
-		if(k < _arrangement[word_id].size()){
-			vector<int> &tables = _arrangement[word_id];
-			tables[k]--;
+		if(table_k < _arrangement[token_id].size()){
+			vector<int> &tables = _arrangement[token_id];
+			tables[table_k]--;
 			_num_customers--;
-			if(tables[k] < 0){
+			if(tables[table_k] < 0){
 				printf("\x1b[41;97m");
 				printf("WARNING");
 				printf("\x1b[49;39m");
 				printf(" _arrangement has fallen bellow 0.\n");
 				return false;
 			}
-			if(tables[k] == 0){
+			if(tables[table_k] == 0){
 				if(_parent != NULL){
-					_parent->removeCustomer(word_id, false);
+					_parent->removeCustomer(token_id, false);
 				}
-				tables.erase(tables.begin() + k);
+				tables.erase(tables.begin() + table_k);
 				_num_tables--;
 				if(tables.size() == 0){
-					_arrangement.erase(word_id);
-					// cout << "Node::removeCustomerWithIdAndTable _arrangement " << word_id << " has been deleted." << endl;
+					_arrangement.erase(token_id);
+					// cout << "Node::removeCustomerFromTable _arrangement " << token_id << " has been deleted." << endl;
 				}
-				// cout << "Node::removeCustomerWithIdAndTable table " << k << " has been deleted." << endl;
+				// cout << "Node::removeCustomerFromTable table " << table_k << " has been deleted." << endl;
 			}
 			return true;
 		}
@@ -116,14 +116,14 @@ public:
 	int _depth;										// ノードの深さ　rootが0
 	id _identifier;									// 識別用　特別な意味は無い VPYLMとは無関係
 
-	Node(id word_id = 0){
+	Node(id token_id = 0){
 		_num_tables = 0;
 		_num_customers = 0;
 		_stop_count = 0;
 		_pass_count = 0;
 		_identifier = _auto_increment;
 		_auto_increment++;
-		_id = word_id;
+		_id = token_id;
 		_parent = NULL;
 	}
 	bool parentExists(){
@@ -177,7 +177,7 @@ public:
 		}
 		return child;
 	}
-	void addCustomer(id word_id, double parent_p_w, vector<double> &d_m, vector<double> &theta_m, bool update_n = true){
+	void addCustomer(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m, bool update_n = true){
 		if(_depth >= d_m.size()){
 			while(d_m.size() <= _depth){
 				d_m.push_back(PYLM_INITIAL_D);
@@ -189,8 +189,8 @@ public:
 
 		double d_u = d_m[_depth];
 		double theta_u = theta_m[_depth];
-		if(_arrangement.find(word_id) == _arrangement.end()){
-			if(!addCustomerToEmptyArrangementWithId(word_id, parent_p_w, d_m, theta_m)){
+		if(_arrangement.find(token_id) == _arrangement.end()){
+			if(!addCustomerToEmptyArrangement(token_id, parent_Pw, d_m, theta_m)){
 				printf("\x1b[41;97m");
 				printf("WARNING");
 				printf("\x1b[49;39m");
@@ -200,13 +200,13 @@ public:
 				incrementStopCount();
 			}
 		}else{
-			vector<int> &tables = _arrangement[word_id];
+			vector<int> &tables = _arrangement[token_id];
 			double rand_max = 0.0;
 			for(int k = 0;k < tables.size();k++){
 				rand_max += std::max(0.0, tables[k] - d_u);
 			}
 			double t_u = (double)_num_tables;
-			rand_max += (theta_u + d_u * t_u) * parent_p_w;
+			rand_max += (theta_u + d_u * t_u) * parent_Pw;
 
 			uniform_real_distribution<double> rand(0, rand_max);
 			double r = rand(Sampler::mt);
@@ -217,7 +217,7 @@ public:
 				// cout << "Node." << _identifier << "::addCustomer " << r << " <= " << sum << endl;
 				if(r <= sum){
 					// cout << "Node." << _identifier << "::addCustomer sum is bigger than r." << endl;
-					if(!addCustomerWithIdAndTable(word_id, k, parent_p_w, d_m, theta_m)){
+					if(!addCustomerToTable(token_id, k, parent_Pw, d_m, theta_m)){
 						printf("\x1b[41;97m");
 						printf("WARNING");
 						printf("\x1b[49;39m");
@@ -230,19 +230,19 @@ public:
 				}
 			}
 
-			addCustomerToNewTableWithId(word_id, parent_p_w, d_m, theta_m);
+			addCustomerToNewTable(token_id, parent_Pw, d_m, theta_m);
 			if(update_n){
 				incrementStopCount();
 			}
 		}
 	}
 
-	bool removeCustomer(id word_id, bool update_n = true){
-		if(_arrangement.find(word_id) == _arrangement.end()){
+	bool removeCustomer(id token_id, bool update_n = true){
+		if(_arrangement.find(token_id) == _arrangement.end()){
 			return false;
 		}
 
-		vector<int> &tables = _arrangement[word_id];
+		vector<int> &tables = _arrangement[token_id];
 		double max = 0.0;
 		for(int k = 0;k < tables.size();k++){
 			max += tables[k];
@@ -255,7 +255,7 @@ public:
 		for(int k = 0;k < tables.size();k++){
 			sum += tables[k];
 			if(r <= sum){
-				if(!removeCustomerWithIdAndTable(word_id, k)){
+				if(!removeCustomerFromTable(token_id, k)){
 					printf("\x1b[41;97m");
 					printf("WARNING");
 					printf("\x1b[49;39m");
@@ -267,7 +267,7 @@ public:
 				return true;
 			}
 		}
-		if(!removeCustomerWithIdAndTable(word_id, tables.size() - 1)){
+		if(!removeCustomerFromTable(token_id, tables.size() - 1)){
 			printf("\x1b[41;97m");
 			printf("WARNING");
 			printf("\x1b[49;39m");
@@ -279,8 +279,8 @@ public:
 		return true;
 	}
 
-	double Pw(id word_id, double g0, vector<double> &d_m, vector<double> &theta_m){
-		if(word_id == 0){
+	double Pw(id token_id, double g0, vector<double> &d_m, vector<double> &theta_m){
+		if(token_id == 0){
 			return 1;
 		}
 		if(_depth >= d_m.size()){
@@ -297,14 +297,14 @@ public:
 		double t_u = (double)_num_tables;
 		double c_u = (double)_num_customers;
 		double mult = (theta_u + d_u * t_u) / (theta_u + c_u);
-		if(_arrangement.find(word_id) == _arrangement.end()){
+		if(_arrangement.find(token_id) == _arrangement.end()){
 			if(_parent != NULL){
-				return _parent->Pw(word_id, g0, d_m, theta_m) * mult;
+				return _parent->Pw(token_id, g0, d_m, theta_m) * mult;
 			}
 			return g0 * mult;
 		}
 		if(_parent != NULL){
-			vector<int> &tables = _arrangement[word_id];
+			vector<int> &tables = _arrangement[token_id];
 			double c_uw = std::accumulate(tables.begin(), tables.end(), 0);
 			double t_uw = tables.size();
 
@@ -314,12 +314,12 @@ public:
 			}
 			double second_coeff = (theta_u + d_u * t_u) / (theta_u + c_u);
 
-			double parent_p = _parent->Pw(word_id, g0, d_m, theta_m);
+			double parent_p = _parent->Pw(token_id, g0, d_m, theta_m);
 			double p = first_coeff + second_coeff * parent_p;
 			return p;
 		}
 
-		vector<int> &tables = _arrangement[word_id];
+		vector<int> &tables = _arrangement[token_id];
 		double c_uw = std::accumulate(tables.begin(), tables.end(), 0);
 		double t_uw = tables.size();
 
@@ -383,10 +383,10 @@ public:
 			_parent->decrementPassCount();
 		}
 	}
-	void deleteChildWithId(id word_id){
-		Node* child = findChildWithId(word_id);
+	void deleteChildWithId(id token_id){
+		Node* child = findChildWithId(token_id);
 		if(child){
-			_children.erase(word_id);
+			_children.erase(token_id);
 			delete child;
 		}
 		if(_children.size() == 0 && _arrangement.size() == 0){
@@ -451,8 +451,8 @@ public:
 
 	void setActiveKeys(unordered_map<id, bool> &keys){
 		for(auto elem: _arrangement){
-			id word_id = elem.first;
-			keys[word_id] = true;
+			id token_id = elem.first;
+			keys[token_id] = true;
 		}
 		for(auto elem: _children){
 			elem.second->setActiveKeys(keys);
@@ -461,7 +461,7 @@ public:
 
 	void countNodeForEachDepth(unordered_map<id, int> &map){
 		for(auto elem: _arrangement){
-			id word_id = elem.first;
+			id token_id = elem.first;
 			map[_depth + 1] += 1;
 		}
 		for(auto elem: _children){
