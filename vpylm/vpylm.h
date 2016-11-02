@@ -60,7 +60,7 @@ public:
 				return false;
 			}
 			id u_t = context[w_t_i - depth];
-			Node* child = node->generateChildIfNeeded(u_t);
+			Node* child = node->findChildNode(u_t, true);
 			if(child == NULL){
 				// cout << "internal error occurred." << endl;
 				return false;
@@ -81,7 +81,7 @@ public:
 		for(int depth = 1;depth <= n_t;depth++){
 			id u_t = context[w_t_i - depth];
 			// cout << "u_t: " << u_t << endl;
-			Node* child = node->findChildWithId(u_t);
+			Node* child = node->findChildNode(u_t);
 			if(child == NULL){
 				return false;
 			}
@@ -126,7 +126,7 @@ public:
 				}
 				if(n < w_t_i){
 					id u_t = context_ids[w_t_i - n - 1];
-					node = node->findChildWithId(u_t);
+					node = node->findChildNode(u_t);
 				}
 			}else{
 				double p_stop = p_pass * _beta_stop / (_beta_stop + _beta_pass);
@@ -171,7 +171,7 @@ public:
 			if(node == NULL){
 				break;
 			}
-			Node* child = node->findChildWithId(u_t);
+			Node* child = node->findChildNode(u_t);
 			if(child == NULL){
 				break;
 			}
@@ -205,7 +205,7 @@ public:
 			if(node == NULL){
 				break;
 			}
-			Node* child = node->findChildWithId(u_t);
+			Node* child = node->findChildNode(u_t);
 			if(child == NULL){
 				break;
 			}
@@ -240,7 +240,7 @@ public:
 			if(node == NULL){
 				break;
 			}
-			Node* child = node->findChildWithId(u_t);
+			Node* child = node->findChildNode(u_t);
 			if(child == NULL){
 				break;
 			}
@@ -303,7 +303,7 @@ public:
 		for(int n = 0;n <= w_t_i;n++){
 			if(node){
 				id u_t = context_ids[w_t_i - n];
-				node = node->findChildWithId(u_t);
+				node = node->findChildNode(u_t);
 				if(node == NULL){
 					break;
 				}

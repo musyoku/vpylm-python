@@ -14,6 +14,7 @@
 #include <boost/serialization/unordered_map.hpp>
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/vector.hpp>
+#include "c_printf.h"
 #include "sampler.h"
 #include "const.h"
 #include "vocab.h"
@@ -22,6 +23,7 @@ using namespace std;
 
 class Node{
 private:
+	// 新しいテーブルを生成しそこに客を追加
 	bool addCustomerToEmptyArrangement(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
 		if(_arrangement.find(token_id) == _arrangement.end()){
 			vector<int> tables = {1};
@@ -29,12 +31,16 @@ private:
 			_num_customers++;
 			_num_tables++;
 			if(_parent != NULL){
+				// 親に代理客を送る
 				_parent->addCustomer(token_id, parent_Pw, d_m, theta_m, false);
 			}
 			return true;
 		}
+		c_printf("[R]%s", "エラー");
+		c_printf("[n]%s", " 客を追加できません. _arrangement.find(token_id) == _arrangement.end()\n");
 		return false;
 	}
+	// 客をテーブルに追加
 	bool addCustomerToTable(id token_id, int table_k, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
 		if(_arrangement.find(token_id) == _arrangement.end()){
 			return addCustomerToEmptyArrangement(token_id, parent_Pw, d_m, theta_m);
@@ -44,6 +50,8 @@ private:
 			_num_customers++;
 			return true;
 		}
+		c_printf("[R]%s", "エラー");
+		c_printf("[n]%s", " 客を追加できません. table_k < _arrangement[token_id].size()\n");
 		return false;
 	}
 	bool addCustomerToNewTable(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
@@ -57,6 +65,8 @@ private:
 	}
 	bool removeCustomerFromTable(id token_id, int table_k){
 		if(_arrangement.find(token_id) == _arrangement.end()){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 客を除去できません. _arrangement.find(token_id) == _arrangement.end()\n");
 			return false;
 		}
 		if(table_k < _arrangement[token_id].size()){
@@ -64,10 +74,8 @@ private:
 			tables[table_k]--;
 			_num_customers--;
 			if(tables[table_k] < 0){
-				printf("\x1b[41;97m");
-				printf("WARNING");
-				printf("\x1b[49;39m");
-				printf(" _arrangement has fallen bellow 0.\n");
+				c_printf("[R]%s", "エラー");
+				c_printf("[n]%s", " 客の管理にバグがあります. tables[table_k] < 0\n");
 				return false;
 			}
 			if(tables[table_k] == 0){
@@ -78,12 +86,12 @@ private:
 				_num_tables--;
 				if(tables.size() == 0){
 					_arrangement.erase(token_id);
-					// cout << "Node::removeCustomerFromTable _arrangement " << token_id << " has been deleted." << endl;
 				}
-				// cout << "Node::removeCustomerFromTable table " << table_k << " has been deleted." << endl;
 			}
 			return true;
 		}
+		c_printf("[R]%s", "エラー");
+		c_printf("[n]%s", " 客を除去できません. table_k < _arrangement[token_id].size()\n");
 		return false;
 	}
 	friend class boost::serialization::access;
@@ -138,64 +146,45 @@ public:
 		}
 		return false;
 	}
-	int numTablesServingWord(int id){
-		if(_arrangement.find(id) == _arrangement.end()){
+	int numTablesServingWord(id token_id){
+		if(_arrangement.find(token_id) == _arrangement.end()){
 			return 0;
 		}
-		return _arrangement[id].size();
+		return _arrangement[token_id].size();
 	}
-	int numCustomersEatingWord(int id){
-		if(_arrangement.find(id) == _arrangement.end()){
+	int numCustomersEatingWord(id token_id){
+		if(_arrangement.find(token_id) == _arrangement.end()){
 			return 0;
 		}
-		vector<int> &tables = _arrangement[id];
+		vector<int> &tables = _arrangement[token_id];
 		int sum = 0;
 		for(int i = 0;i < tables.size();i++){
 			sum += tables[i];
 		}
 		return sum;
 	}
-	Node* findChildWithId(int id, bool generate_if_needed = false){
-		if(generate_if_needed){
-			return generateChildIfNeeded(id);
+	Node* findChildNode(id token_id, bool generate_if_not_exist = false){
+		auto itr = _children.find(token_id);
+		if (itr != _children.end()) {
+			return itr->second;
 		}
-		auto itr = _children.find(id);
-		if (itr == _children.end()) {
+		if(generate_if_not_exist == false){
 			return NULL;
 		}
-		return itr->second;
-	}
-	Node* generateChildIfNeeded(int id){
-		Node* child = NULL;
-		if(childExists(id)){
-			child = _children[id];
-		}else{
-			child = new Node(id);
-			child->_parent = this;
-			child->_depth = _depth + 1;
-			_children[id] = child;
-		}
+		Node* child = new Node(token_id);
+		child->_parent = this;
+		child->_depth = _depth + 1;
+		_children[token_id] = child;
 		return child;
 	}
-	void addCustomer(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m, bool update_n = true){
-		if(_depth >= d_m.size()){
-			while(d_m.size() <= _depth){
-				d_m.push_back(PYLM_INITIAL_D);
-			}
-			while(theta_m.size() <= _depth){
-				theta_m.push_back(PYLM_INITIAL_THETA);
-			}
-		}
 
+	void addCustomer(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m, bool update_n = true){
+		initHyperparametersAtDepthIfNeeded(_depth, d_m, theta_m);
 		double d_u = d_m[_depth];
 		double theta_u = theta_m[_depth];
+
 		if(_arrangement.find(token_id) == _arrangement.end()){
-			if(!addCustomerToEmptyArrangement(token_id, parent_Pw, d_m, theta_m)){
-				printf("\x1b[41;97m");
-				printf("WARNING");
-				printf("\x1b[49;39m");
-				printf(" Failed to add a customer to an empty _arrangement\n");
-			}
+			addCustomerToEmptyArrangement(token_id, parent_Pw, d_m, theta_m);
 			if(update_n == true){
 				incrementStopCount();
 			}
@@ -214,9 +203,7 @@ public:
 			double sum = 0.0;
 			for(int k = 0;k < tables.size();k++){
 				sum += std::max(0.0, tables[k] - d_u);
-				// cout << "Node." << _identifier << "::addCustomer " << r << " <= " << sum << endl;
 				if(r <= sum){
-					// cout << "Node." << _identifier << "::addCustomer sum is bigger than r." << endl;
 					if(!addCustomerToTable(token_id, k, parent_Pw, d_m, theta_m)){
 						printf("\x1b[41;97m");
 						printf("WARNING");
@@ -280,17 +267,7 @@ public:
 	}
 
 	double Pw(id token_id, double g0, vector<double> &d_m, vector<double> &theta_m){
-		if(token_id == 0){
-			return 1;
-		}
-		if(_depth >= d_m.size()){
-			while(d_m.size() <= _depth){
-				d_m.push_back(PYLM_INITIAL_D);
-			}
-			while(theta_m.size() <= _depth){
-				theta_m.push_back(PYLM_INITIAL_THETA);
-			}
-		}
+		initHyperparametersAtDepthIfNeeded(_depth, d_m, theta_m);
 
 		double d_u = d_m[_depth];
 		double theta_u = theta_m[_depth];
@@ -384,7 +361,7 @@ public:
 		}
 	}
 	void deleteChildWithId(id token_id){
-		Node* child = findChildWithId(token_id);
+		Node* child = findChildNode(token_id);
 		if(child){
 			_children.erase(token_id);
 			delete child;
@@ -540,6 +517,18 @@ public:
 		}
 		return sum_z_uwkj;
 	}
+
+	void initHyperparametersAtDepthIfNeeded(int depth, vector<double> &d_m, vector<double> &theta_m){
+		if(depth >= d_m.size()){
+			while(d_m.size() <= depth){
+				d_m.push_back(PYLM_INITIAL_D);
+			}
+			while(theta_m.size() <= depth){
+				theta_m.push_back(PYLM_INITIAL_THETA);
+			}
+		}
+	}
+
 	friend ostream& operator<<(ostream& os, const Node& node){
 		os << "[Node." << node._identifier << ":id." << node._id << ":depth." << node._depth << "]" << endl;
 		os << "_num_tables: " << node._num_tables << ", _num_customers: " << node._num_customers << endl;

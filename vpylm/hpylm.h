@@ -114,7 +114,7 @@ public:
 		Node* node = _root;
 		for(int depth = 0;depth < _max_depth;depth++){
 			id context_token_id = token_ids[token_t_index - depth - 1];
-			Node* child = node->findChildWithId(context_token_id, generate_node_if_needed);
+			Node* child = node->findChildNode(context_token_id, generate_node_if_needed);
 			if(child == NULL){
 				return NULL;
 			}
@@ -136,14 +136,14 @@ public:
 		// HPYLMでは深さは固定
 		if(context_token_ids.size() < _max_depth){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 単語確率を計算できません. $context_token_ids.size() < $_max_depth\n");
+			c_printf("[n]%s", " 単語確率を計算できません. context_token_ids.size() < _max_depth\n");
 			return -1;
 		}
 
 		Node* node = findNodeByTracingBackContext(context_token_ids, token_id, false);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 単語確率を計算できません. $node == NULL\n");
+			c_printf("[n]%s", " 単語確率を計算できません. node == NULL\n");
 			return -1;
 		}
 
@@ -157,7 +157,7 @@ public:
 	double Pw(vector<id> &token_ids){
 		if(token_ids.size() < _max_depth + 1){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 単語確率を計算できません. $token_ids.size() < $_max_depth\n");
+			c_printf("[n]%s", " 単語確率を計算できません. token_ids.size() < _max_depth\n");
 			return -1;
 		}
 		double mul_Pw_h = 1;
@@ -173,7 +173,7 @@ public:
 	double log_Pw(vector<id> &token_ids){
 		if(token_ids.size() < _max_depth + 1){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 単語確率を計算できません. $token_ids.size() < $_max_depth\n");
+			c_printf("[n]%s", " 単語確率を計算できません. token_ids.size() < _max_depth\n");
 			return -1;
 		}
 		double sum_Pw_h = 0;
@@ -190,7 +190,7 @@ public:
 	double log2_Pw(vector<id> &token_ids){
 		if(token_ids.size() < _max_depth + 1){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 単語確率を計算できません. $token_ids.size() < $_max_depth\n");
+			c_printf("[n]%s", " 単語確率を計算できません. token_ids.size() < _max_depth\n");
 			return -1;
 		}
 		double sum_Pw_h = 0;
