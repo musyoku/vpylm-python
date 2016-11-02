@@ -99,7 +99,7 @@ public:
 
 		if(node->parentExists() && node->needToRemoveFromParent()){
 			// 客が一人もいなくなったらノードを削除する
-			node->_parent->deleteChildWithId(node->_id);
+			node->_parent->deleteChildNode(node->_token_id);
 		}
 		return true;
 	}

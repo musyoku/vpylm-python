@@ -75,7 +75,7 @@ private:
 			_num_customers--;
 			if(tables[table_k] < 0){
 				c_printf("[R]%s", "エラー");
-				c_printf("[n]%s", " 客の管理にバグがあります. tables[table_k] < 0\n");
+				c_printf("[n]%s", " 客の管理に不具合があります. tables[table_k] < 0\n");
 				return false;
 			}
 			if(tables[table_k] == 0){
@@ -106,7 +106,7 @@ private:
 		archive & _parent;
 		archive & _stop_count;
 		archive & _pass_count;
-		archive & _id;
+		archive & _token_id;
 		archive & _depth;
 		archive & _identifier;
 		archive & _auto_increment;
@@ -120,7 +120,7 @@ public:
 	Node* _parent;									// 親ノード
 	int _stop_count;								// 停止回数
 	int _pass_count;								// 通過回数
-	id _id;											// 単語ID　文字ID
+	id _token_id;									// 単語ID　文字ID
 	int _depth;										// ノードの深さ　rootが0
 	id _identifier;									// 識別用　特別な意味は無い VPYLMとは無関係
 
@@ -131,7 +131,7 @@ public:
 		_pass_count = 0;
 		_identifier = _auto_increment;
 		_auto_increment++;
-		_id = token_id;
+		_token_id = token_id;
 		_parent = NULL;
 	}
 	bool parentExists(){
@@ -333,10 +333,8 @@ public:
 	void decrementStopCount(){
 		_stop_count--;
 		if(_stop_count < 0){
-			printf("\x1b[41;97m");
-			printf("WARNING");
-			printf("\x1b[49;39m");
-			printf(" _stop_count has fallen bellow 0.\n");
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 停止回数の管理に不具合があります. _stop_count < 0\n");
 		}
 		if(_parent != NULL){
 			_parent->decrementPassCount();
@@ -351,16 +349,14 @@ public:
 	void decrementPassCount(){
 		_pass_count--;
 		if(_pass_count < 0){
-			printf("\x1b[41;97m");
-			printf("WARNING");
-			printf("\x1b[49;39m");
-			printf(" _pass_count has fallen bellow 0.\n");
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 通過回数の管理に不具合があります. _pass_count < 0\n");
 		}
 		if(_parent != NULL){
 			_parent->decrementPassCount();
 		}
 	}
-	void deleteChildWithId(id token_id){
+	void deleteChildNode(id token_id){
 		Node* child = findChildNode(token_id);
 		if(child){
 			_children.erase(token_id);
@@ -368,7 +364,7 @@ public:
 		}
 		if(_children.size() == 0 && _arrangement.size() == 0){
 			if(_parent != NULL){
-				_parent->deleteChildWithId(this->_id);
+				_parent->deleteChildNode(this->_token_id);
 			}
 		}
 	}
@@ -415,10 +411,8 @@ public:
 			}
 		}
 		if(num != _num_customers){
-			printf("\x1b[41;97m");
-			printf("WARNING");
-			printf("\x1b[49;39m");
-			printf(" _num_customers is broken.\n");
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 客の管理に不具合があります. num != _num_customers\n");
 		}
 		for(auto elem: _children){
 			num += elem.second->numCustomers();
@@ -462,10 +456,8 @@ public:
 			for(int i = 1;i <= _num_tables - 1;i++){
 				double denominator = theta_u + d_u * (double)i;
 				if(denominator == 0){
-					printf("\x1b[41;97m");
-					printf("WARNING");
-					printf("\x1b[49;39m");
-					printf(" Division by zero.\n");
+					c_printf("[R]%s", "エラー");
+					c_printf("[n]%s", " 0除算. denominator == 0\n");
 					continue;
 				}
 				sum_y_ui += Sampler::bernoulli(theta_u / denominator);;
@@ -480,10 +472,8 @@ public:
 			for(int i = 1;i <= _num_tables - 1;i++){
 				double denominator = theta_u + d_u * (double)i;
 				if(denominator == 0){
-					printf("\x1b[41;97m");
-					printf("WARNING");
-					printf("\x1b[49;39m");
-					printf(" Division by zero.\n");
+					c_printf("[R]%s", "エラー");
+					c_printf("[n]%s", " 0除算. denominator == 0\n");
 					continue;
 				}
 				sum_1_y_ui += 1.0 - Sampler::bernoulli(theta_u / denominator);
@@ -504,10 +494,8 @@ public:
 				if(c_uwk >= 2){
 					for(int j = 1;j <= c_uwk - 1;j++){
 						if(j - d_u == 0){
-							printf("\x1b[41;97m");
-							printf("WARNING");
-							printf("\x1b[49;39m");
-							printf(" Division by zero.\n");
+							c_printf("[R]%s", "エラー");
+							c_printf("[n]%s", " 0除算. j - d_u == 0\n");
 							continue;
 						}
 						sum_z_uwkj += 1 - Sampler::bernoulli((j - 1) / (j - d_u));
@@ -530,7 +518,7 @@ public:
 	}
 
 	friend ostream& operator<<(ostream& os, const Node& node){
-		os << "[Node." << node._identifier << ":id." << node._id << ":depth." << node._depth << "]" << endl;
+		os << "[Node." << node._identifier << ":id." << node._token_id << ":depth." << node._depth << "]" << endl;
 		os << "_num_tables: " << node._num_tables << ", _num_customers: " << node._num_customers << endl;
 		os << "_stop_count: " << node._stop_count << ", _pass_count: " << node._pass_count << endl;
 		os << "- _arrangement" << endl;

@@ -91,7 +91,7 @@ public:
 		bool should_remove_from_parent = false;
 		node->removeCustomer(w_t, should_remove_from_parent);
 		if(should_remove_from_parent && node->_parent != NULL){
-			node->_parent->deleteChildWithId(node->_id);
+			node->_parent->deleteChildNode(node->_token_id);
 		}
 		return true;
 	}
