@@ -68,7 +68,7 @@ public:
 
 	// 単語列のindex番目の単語をモデルに追加
 	bool add(vector<id> &token_ids, int token_t_index){
-		Node* node = findNodeByTracingBackContext(token_ids, token_t_index, true);
+		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, true);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s", " 客を追加できません. ノードが見つかりません.\n");
@@ -79,15 +79,15 @@ public:
 
 		// "客が親から生成される確率"と自らが持つ経験分布の混合分布から次の客の座るテーブルが決まる
 		double parent_Pw = _g0;
-		if(node->parentExists()){
+		if(node->parent_exists()){
 			parent_Pw = node->_parent->Pw(token_t, _g0, _d_m, _theta_m);
 		}
-		node->addCustomer(token_t, parent_Pw, _d_m, _theta_m);
+		node->add_customer(token_t, parent_Pw, _d_m, _theta_m);
 		return false;
 	}
 
 	bool remove(vector<id> &token_ids, int token_t_index){
-		Node* node = findNodeByTracingBackContext(token_ids, token_t_index, false);
+		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, false);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s", " 客を除去できません. ノードが見つかりません.\n");
@@ -95,17 +95,17 @@ public:
 		}
 
 		id token_t = token_ids[token_t_index];
-		node->removeCustomer(token_t);
+		node->remove_customer(token_t);
 
-		if(node->parentExists() && node->needToRemoveFromParent()){
+		if(node->parent_exists() && node->need_to_remove_from_parent()){
 			// 客が一人もいなくなったらノードを削除する
-			node->_parent->deleteChildNode(node->_token_id);
+			node->_parent->delete_child_node(node->_token_id);
 		}
 		return true;
 	}
 
 	// 文脈を後ろ向きに_max_depthだけ辿る
-	Node* findNodeByTracingBackContext(vector<id> &token_ids, int token_t_index, bool generate_node_if_needed = false){
+	Node* find_node_by_tracing_back_context(vector<id> &token_ids, int token_t_index, bool generate_node_if_needed = false){
 		// HPYLMでは深さは固定
 		if(token_t_index < _max_depth){
 			return NULL;
@@ -114,7 +114,7 @@ public:
 		Node* node = _root;
 		for(int depth = 0;depth < _max_depth;depth++){
 			id context_token_id = token_ids[token_t_index - depth - 1];
-			Node* child = node->findChildNode(context_token_id, generate_node_if_needed);
+			Node* child = node->find_child_node(context_token_id, generate_node_if_needed);
 			if(child == NULL){
 				return NULL;
 			}
@@ -140,7 +140,7 @@ public:
 			return -1;
 		}
 
-		Node* node = findNodeByTracingBackContext(context_token_ids, token_id, false);
+		Node* node = find_node_by_tracing_back_context(context_token_ids, token_id, false);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s", " 単語確率を計算できません. node == NULL\n");
@@ -204,8 +204,8 @@ public:
 		return sum_Pw_h;
 	}
 
-	id sampleNextToken(vector<id> &context_token_ids, id eos_id){
-		Node* node = findNodeByTracingBackContext(context_token_ids, context_token_ids.size() - 1, false);
+	id sample_next_token(vector<id> &context_token_ids, id eos_id){
+		Node* node = find_node_by_tracing_back_context(context_token_ids, context_token_ids.size() - 1, false);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s", " トークンを生成できません. ノードが見つかりません.\n");
@@ -243,7 +243,7 @@ public:
 		return sampled_token_id;
 	}
 
-	void initHyperparametersAtDepthIfNeeded(int depth){
+	void init_hyperparameters_at_depth_if_needed(int depth){
 		if(depth >= _d_m.size()){
 			while(_d_m.size() <= depth){
 				_d_m.push_back(PYLM_INITIAL_D);
@@ -278,7 +278,7 @@ public:
 
 	// "A Bayesian Interpretation of Interpolated Kneser-Ney" Appendix C参照
 	// http://www.gatsby.ucl.ac.uk/~ywteh/research/compling/hpylm.pdf
-	void sumAuxiliaryVariablesRecursively(Node* node, vector<double> &sum_log_x_u_m, vector<double> &sum_y_ui_m, vector<double> &sum_1_y_ui_m, vector<double> &sum_1_z_uwkj_m){
+	void sum_auxiliary_variables_recursively(Node* node, vector<double> &sum_log_x_u_m, vector<double> &sum_y_ui_m, vector<double> &sum_1_y_ui_m, vector<double> &sum_1_z_uwkj_m){
 		for(auto elem: node->_children){
 			Node* child = elem.second;
 			int depth = child->_depth;
@@ -286,7 +286,7 @@ public:
 			if(depth > _bottom){
 				_bottom = depth;
 			}
-			initHyperparametersAtDepthIfNeeded(depth);
+			init_hyperparameters_at_depth_if_needed(depth);
 
 			double d = _d_m[depth];
 			double theta = _theta_m[depth];
@@ -295,12 +295,12 @@ public:
 			sum_1_y_ui_m[depth] += child->auxiliary_1_y_ui(d, theta);	// 1 - y_ui
 			sum_1_z_uwkj_m[depth] += child->auxiliary_1_z_uwkj(d);		// 1 - z_uwkj
 
-			sumAuxiliaryVariablesRecursively(child, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m);
+			sum_auxiliary_variables_recursively(child, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m);
 		}
 	}
 
 	// dとθの推定
-	void sampleHyperParams(){
+	void sample_hyperparams(){
 		unordered_map<int, vector<Node*> > nodes_by_depth;
 		int max_depth = _d_m.size() - 1;
 
@@ -320,8 +320,8 @@ public:
 		// それ以外
 		_bottom = 0;
 		// _bottomは以下を実行すると更新される
-		sumAuxiliaryVariablesRecursively(_root, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m);
-		initHyperparametersAtDepthIfNeeded(_bottom);
+		sum_auxiliary_variables_recursively(_root, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m);
+		init_hyperparameters_at_depth_if_needed(_bottom);
 
 		for(int u = 0;u <= _bottom;u++){
 			_d_m[u] = Sampler::beta(_a_m[u] + sum_1_y_ui_m[u], _b_m[u] + sum_1_z_uwkj_m[u]);
@@ -342,24 +342,24 @@ public:
 		}
 	}
 
-	int maxDepth(){
+	int get_max_depth(){
 		return _d_m.size() - 1;
 	}
 
-	int numChildNodes(){
-		return _root->numChildNodes();
+	int get_num_child_nodes(){
+		return _root->get_num_child_nodes();
 	}
 
-	int numCustomers(){
-		return _root->numCustomers();
+	int get_num_customers(){
+		return _root->get_num_customers();
 	}
 
-	void setActiveKeys(unordered_map<id, bool> &keys){
-		_root->setActiveKeys(keys);
+	void set_active_tokens(unordered_map<id, bool> &flags){
+		_root->set_active_tokens(flags);
 	}
 
-	void countNodeForEachDepth(unordered_map<id, int> &map){
-		_root->countNodeForEachDepth(map);
+	void count_node_of_each_depth(unordered_map<id, int> &map){
+		_root->count_node_of_each_depth(map);
 	}
 
 	void save(string dir = "model/"){
@@ -368,9 +368,9 @@ public:
 		boost::archive::binary_oarchive oarchive(ofs);
 		oarchive << static_cast<const HPYLM&>(*this);
 		cout << "saved to " << filename << endl;
-		cout << "	num_customers: " << numCustomers() << endl;
-		cout << "	num_nodes: " << numChildNodes() << endl;
-		cout << "	max_depth: " << maxDepth() << endl;
+		cout << "	num_customers: " << get_num_customers() << endl;
+		cout << "	num_nodes: " << get_num_child_nodes() << endl;
+		cout << "	max_depth: " << get_max_depth() << endl;
 	}
 
 	void load(string dir = "model/"){

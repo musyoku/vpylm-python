@@ -31,7 +31,7 @@ public:
 		c_printf("[n]%s", " VPYLMを初期化しています ...\n");
 	}
 
-	// 基底分布 i.e. 単語（文字）ゼログラム確率
+	// 基底分布 i.e. 単語（文字）0-gram確率
 	// 1 / 単語数（文字数）でよい
 	void set_g0(double g0){
 		this->vpylm->_g0 = g0;
@@ -57,7 +57,7 @@ public:
 
 		if(python::len(prev_orders) != word_ids.size()){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " $prev_ordersと$word_idsの長さが違います\n");
+			c_printf("[n]%s", " prev_ordersとword_idsの長さが違います\n");
 		}
 
 		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){

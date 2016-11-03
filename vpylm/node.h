@@ -24,7 +24,7 @@ using namespace std;
 class Node{
 private:
 	// 新しいテーブルを生成しそこに客を追加
-	bool addCustomerToEmptyArrangement(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
+	bool add_customer_to_empty_arrangement(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
 		if(_arrangement.find(token_id) == _arrangement.end()){
 			vector<int> tables = {1};
 			_arrangement[token_id] = tables;
@@ -32,7 +32,7 @@ private:
 			_num_tables++;
 			if(_parent != NULL){
 				// 親に代理客を送る
-				_parent->addCustomer(token_id, parent_Pw, d_m, theta_m, false);
+				_parent->add_customer(token_id, parent_Pw, d_m, theta_m, false);
 			}
 			return true;
 		}
@@ -41,9 +41,9 @@ private:
 		return false;
 	}
 	// 客をテーブルに追加
-	bool addCustomerToTable(id token_id, int table_k, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
+	bool add_customer_to_table(id token_id, int table_k, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
 		if(_arrangement.find(token_id) == _arrangement.end()){
-			return addCustomerToEmptyArrangement(token_id, parent_Pw, d_m, theta_m);
+			return add_customer_to_empty_arrangement(token_id, parent_Pw, d_m, theta_m);
 		}
 		if(table_k < _arrangement[token_id].size()){
 			_arrangement[token_id][table_k]++;
@@ -54,16 +54,16 @@ private:
 		c_printf("[n]%s", " 客を追加できません. table_k < _arrangement[token_id].size()\n");
 		return false;
 	}
-	bool addCustomerToNewTable(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
+	bool add_customer_to_new_table(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
 		_arrangement[token_id].push_back(1);
 		_num_tables++;
 		_num_customers++;
 		if(_parent != NULL){
-			_parent->addCustomer(token_id, parent_Pw, d_m, theta_m, false);
+			_parent->add_customer(token_id, parent_Pw, d_m, theta_m, false);
 		}
 		return true;
 	}
-	bool removeCustomerFromTable(id token_id, int table_k){
+	bool remove_customer_from_table(id token_id, int table_k){
 		if(_arrangement.find(token_id) == _arrangement.end()){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s", " 客を除去できません. _arrangement.find(token_id) == _arrangement.end()\n");
@@ -80,7 +80,7 @@ private:
 			}
 			if(tables[table_k] == 0){
 				if(_parent != NULL){
-					_parent->removeCustomer(token_id, false);
+					_parent->remove_customer(token_id, false);
 				}
 				tables.erase(tables.begin() + table_k);
 				_num_tables--;
@@ -134,25 +134,25 @@ public:
 		_token_id = token_id;
 		_parent = NULL;
 	}
-	bool parentExists(){
+	bool parent_exists(){
 		return !(_parent == NULL);
 	}
-	bool childExists(int id){
+	bool child_exists(int id){
 		return !(_children.find(id) == _children.end());
 	}
-	bool needToRemoveFromParent(){
+	bool need_to_remove_from_parent(){
 		if(_children.size() == 0 and _arrangement.size() == 0){
 			return true;
 		}
 		return false;
 	}
-	int numTablesServingWord(id token_id){
+	int get_num_tables_serving_word(id token_id){
 		if(_arrangement.find(token_id) == _arrangement.end()){
 			return 0;
 		}
 		return _arrangement[token_id].size();
 	}
-	int numCustomersEatingWord(id token_id){
+	int get_num_customers_eating_word(id token_id){
 		if(_arrangement.find(token_id) == _arrangement.end()){
 			return 0;
 		}
@@ -163,7 +163,7 @@ public:
 		}
 		return sum;
 	}
-	Node* findChildNode(id token_id, bool generate_if_not_exist = false){
+	Node* find_child_node(id token_id, bool generate_if_not_exist = false){
 		auto itr = _children.find(token_id);
 		if (itr != _children.end()) {
 			return itr->second;
@@ -178,15 +178,15 @@ public:
 		return child;
 	}
 
-	void addCustomer(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m, bool update_n = true){
-		initHyperparametersAtDepthIfNeeded(_depth, d_m, theta_m);
+	void add_customer(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m, bool update_n = true){
+		init_hyperparameters_at_depth_if_needed(_depth, d_m, theta_m);
 		double d_u = d_m[_depth];
 		double theta_u = theta_m[_depth];
 
 		if(_arrangement.find(token_id) == _arrangement.end()){
-			addCustomerToEmptyArrangement(token_id, parent_Pw, d_m, theta_m);
+			add_customer_to_empty_arrangement(token_id, parent_Pw, d_m, theta_m);
 			if(update_n == true){
-				incrementStopCount();
+				increment_stop_count();
 			}
 		}else{
 			vector<int> &tables = _arrangement[token_id];
@@ -204,27 +204,27 @@ public:
 			for(int k = 0;k < tables.size();k++){
 				sum += std::max(0.0, tables[k] - d_u);
 				if(r <= sum){
-					if(!addCustomerToTable(token_id, k, parent_Pw, d_m, theta_m)){
+					if(!add_customer_to_table(token_id, k, parent_Pw, d_m, theta_m)){
 						printf("\x1b[41;97m");
 						printf("WARNING");
 						printf("\x1b[49;39m");
 						printf(" Failed to add a customer\n");
 					}
 					if(update_n){
-						incrementStopCount();
+						increment_stop_count();
 					}
 					return;
 				}
 			}
 
-			addCustomerToNewTable(token_id, parent_Pw, d_m, theta_m);
+			add_customer_to_new_table(token_id, parent_Pw, d_m, theta_m);
 			if(update_n){
-				incrementStopCount();
+				increment_stop_count();
 			}
 		}
 	}
 
-	bool removeCustomer(id token_id, bool update_n = true){
+	bool remove_customer(id token_id, bool update_n = true){
 		if(_arrangement.find(token_id) == _arrangement.end()){
 			return false;
 		}
@@ -242,32 +242,32 @@ public:
 		for(int k = 0;k < tables.size();k++){
 			sum += tables[k];
 			if(r <= sum){
-				if(!removeCustomerFromTable(token_id, k)){
+				if(!remove_customer_from_table(token_id, k)){
 					printf("\x1b[41;97m");
 					printf("WARNING");
 					printf("\x1b[49;39m");
 					printf(" Failed to remove a customer.\n");
 				}
 				if(update_n == true){
-					decrementStopCount();
+					decrement_stop_count();
 				}
 				return true;
 			}
 		}
-		if(!removeCustomerFromTable(token_id, tables.size() - 1)){
+		if(!remove_customer_from_table(token_id, tables.size() - 1)){
 			printf("\x1b[41;97m");
 			printf("WARNING");
 			printf("\x1b[49;39m");
 			printf(" Failed to remove a customer.\n");
 		}
 		if(update_n == true){
-			decrementStopCount();
+			decrement_stop_count();
 		}
 		return true;
 	}
 
 	double Pw(id token_id, double g0, vector<double> &d_m, vector<double> &theta_m){
-		initHyperparametersAtDepthIfNeeded(_depth, d_m, theta_m);
+		init_hyperparameters_at_depth_if_needed(_depth, d_m, theta_m);
 
 		double d_u = d_m[_depth];
 		double theta_u = theta_m[_depth];
@@ -310,78 +310,97 @@ public:
 		return p;
 
 	}
-	double p_stop(double beta_stop, double beta_pass){
+	double stop_probability(double beta_stop, double beta_pass){
 		double p = (_stop_count + beta_stop) / (_stop_count + _pass_count + beta_stop + beta_pass);
 		if(_parent != NULL){
-			p *= _parent->p_pass(beta_stop, beta_pass);
+			p *= _parent->pass_probability(beta_stop, beta_pass);
 		}
 		return p;
 	}
-	double p_pass(double beta_stop, double beta_pass){
+	double pass_probability(double beta_stop, double beta_pass){
 		double p = (_pass_count + beta_pass) / (_stop_count + _pass_count + beta_stop + beta_pass);
 		if(_parent != NULL){
-			p *= _parent->p_pass(beta_stop, beta_pass);
+			p *= _parent->pass_probability(beta_stop, beta_pass);
 		}
 		return p;
 	}
-	void incrementStopCount(){
+	void increment_stop_count(){
 		_stop_count++;
 		if(_parent != NULL){
-			_parent->incrementPassCount();
+			_parent->increment_pass_count();
 		}
 	}
-	void decrementStopCount(){
+	void decrement_stop_count(){
 		_stop_count--;
 		if(_stop_count < 0){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s", " 停止回数の管理に不具合があります. _stop_count < 0\n");
 		}
 		if(_parent != NULL){
-			_parent->decrementPassCount();
+			_parent->decrement_passC_count();
 		}
 	}
-	void incrementPassCount(){
+	void increment_pass_count(){
 		_pass_count++;
 		if(_parent != NULL){
-			_parent->incrementPassCount();
+			_parent->increment_pass_count();
 		}
 	}
-	void decrementPassCount(){
+	void decrement_passC_count(){
 		_pass_count--;
 		if(_pass_count < 0){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s", " 通過回数の管理に不具合があります. _pass_count < 0\n");
 		}
 		if(_parent != NULL){
-			_parent->decrementPassCount();
+			_parent->decrement_passC_count();
 		}
 	}
-	void deleteChildNode(id token_id){
-		Node* child = findChildNode(token_id);
+	void delete_child_node(id token_id){
+		Node* child = find_child_node(token_id);
 		if(child){
 			_children.erase(token_id);
 			delete child;
 		}
 		if(_children.size() == 0 && _arrangement.size() == 0){
 			if(_parent != NULL){
-				_parent->deleteChildNode(this->_token_id);
+				_parent->delete_child_node(this->_token_id);
 			}
 		}
 	}
-	int maxDepth(int base){
+	int get_max_depth(int base){
 		int max_depth = base;
 		for(auto elem: _children){
-			int depth = elem.second->maxDepth(base + 1);
+			int depth = elem.second->get_max_depth(base + 1);
 			if(depth > max_depth){
 				max_depth = depth;
 			}
 		}
 		return max_depth;
 	}
-	int numChildNodes(){
+
+	int get_num_child_nodes(){
 		int num = _children.size();
 		for(auto elem: _children){
-			num += elem.second->numChildNodes();
+			num += elem.second->get_num_child_nodes();
+		}
+		return num;
+	}
+
+	int get_num_customers(){
+		int num = 0;
+		for(auto elem: _arrangement){
+			vector<int> customers = elem.second;
+			for(int i = 0;i < customers.size();i++){
+				num += customers[i];
+			}
+		}
+		if(num != _num_customers){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 客の管理に不具合があります. num != _num_customers\n");
+		}
+		for(auto elem: _children){
+			num += elem.second->get_num_customers();
 		}
 		return num;
 	}
@@ -402,41 +421,23 @@ public:
 		return sum;
 	}
 
-	int numCustomers(){
-		int num = 0;
-		for(auto elem: _arrangement){
-			vector<int> customers = elem.second;
-			for(int i = 0;i < customers.size();i++){
-				num += customers[i];
-			}
-		}
-		if(num != _num_customers){
-			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 客の管理に不具合があります. num != _num_customers\n");
-		}
-		for(auto elem: _children){
-			num += elem.second->numCustomers();
-		}
-		return num;
-	}
-
-	void setActiveKeys(unordered_map<id, bool> &keys){
+	void set_active_tokens(unordered_map<id, bool> &flags){
 		for(auto elem: _arrangement){
 			id token_id = elem.first;
-			keys[token_id] = true;
+			flags[token_id] = true;
 		}
 		for(auto elem: _children){
-			elem.second->setActiveKeys(keys);
+			elem.second->set_active_tokens(flags);
 		}
 	}
 
-	void countNodeForEachDepth(unordered_map<id, int> &map){
+	void count_node_of_each_depth(unordered_map<id, int> &map){
 		for(auto elem: _arrangement){
 			id token_id = elem.first;
 			map[_depth + 1] += 1;
 		}
 		for(auto elem: _children){
-			elem.second->countNodeForEachDepth(map);
+			elem.second->count_node_of_each_depth(map);
 		}
 	}
 
@@ -506,7 +507,7 @@ public:
 		return sum_z_uwkj;
 	}
 
-	void initHyperparametersAtDepthIfNeeded(int depth, vector<double> &d_m, vector<double> &theta_m){
+	void init_hyperparameters_at_depth_if_needed(int depth, vector<double> &d_m, vector<double> &theta_m){
 		if(depth >= d_m.size()){
 			while(d_m.size() <= depth){
 				d_m.push_back(PYLM_INITIAL_D);
