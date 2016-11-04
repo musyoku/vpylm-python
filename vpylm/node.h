@@ -141,6 +141,9 @@ public:
 		return !(_children.find(id) == _children.end());
 	}
 	bool need_to_remove_from_parent(){
+		if(_parent == NULL){
+			return false;
+		}
 		if(_children.size() == 0 and _arrangement.size() == 0){
 			return true;
 		}
@@ -178,7 +181,7 @@ public:
 		return child;
 	}
 
-	void add_customer(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m, bool update_n = true){
+	bool add_customer(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m, bool update_n = true){
 		init_hyperparameters_at_depth_if_needed(_depth, d_m, theta_m);
 		double d_u = d_m[_depth];
 		double theta_u = theta_m[_depth];
@@ -204,16 +207,11 @@ public:
 			for(int k = 0;k < tables.size();k++){
 				sum += std::max(0.0, tables[k] - d_u);
 				if(r <= sum){
-					if(!add_customer_to_table(token_id, k, parent_Pw, d_m, theta_m)){
-						printf("\x1b[41;97m");
-						printf("WARNING");
-						printf("\x1b[49;39m");
-						printf(" Failed to add a customer\n");
-					}
+					add_customer_to_table(token_id, k, parent_Pw, d_m, theta_m);
 					if(update_n){
 						increment_stop_count();
 					}
-					return;
+					return false;
 				}
 			}
 
@@ -222,6 +220,7 @@ public:
 				increment_stop_count();
 			}
 		}
+		return true;
 	}
 
 	bool remove_customer(id token_id, bool update_n = true){
@@ -242,27 +241,25 @@ public:
 		for(int k = 0;k < tables.size();k++){
 			sum += tables[k];
 			if(r <= sum){
-				if(!remove_customer_from_table(token_id, k)){
-					printf("\x1b[41;97m");
-					printf("WARNING");
-					printf("\x1b[49;39m");
-					printf(" Failed to remove a customer.\n");
-				}
+				remove_customer_from_table(token_id, k);
 				if(update_n == true){
 					decrement_stop_count();
 				}
 				return true;
 			}
 		}
-		if(!remove_customer_from_table(token_id, tables.size() - 1)){
-			printf("\x1b[41;97m");
-			printf("WARNING");
-			printf("\x1b[49;39m");
-			printf(" Failed to remove a customer.\n");
-		}
+		remove_customer_from_table(token_id, tables.size() - 1);
 		if(update_n == true){
 			decrement_stop_count();
 		}
+		return true;
+	}
+
+	bool remove_from_parent(){
+		if(_parent == NULL){
+			return false;
+		}
+		_parent->delete_child_node(_token_id);
 		return true;
 	}
 

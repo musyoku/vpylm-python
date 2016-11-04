@@ -67,7 +67,7 @@ public:
 	}
 
 	// 単語列のindex番目の単語をモデルに追加
-	bool add(vector<id> &token_ids, int token_t_index){
+	bool add_customer_at_timestep(vector<id> &token_ids, int token_t_index){
 		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, true);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
@@ -86,20 +86,18 @@ public:
 		return false;
 	}
 
-	bool remove(vector<id> &token_ids, int token_t_index){
+	bool remove_customer_at_timestep(vector<id> &token_ids, int token_t_index){
 		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, false);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s", " 客を除去できません. ノードが見つかりません.\n");
 			return false;
 		}
-
 		id token_t = token_ids[token_t_index];
 		node->remove_customer(token_t);
-
-		if(node->parent_exists() && node->need_to_remove_from_parent()){
-			// 客が一人もいなくなったらノードを削除する
-			node->_parent->delete_child_node(node->_token_id);
+		// 客が一人もいなくなったらノードを削除する
+		if(node->need_to_remove_from_parent()){
+			node->remove_from_parent();
 		}
 		return true;
 	}

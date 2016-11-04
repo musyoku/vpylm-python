@@ -63,7 +63,7 @@ public:
 		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){
 			int n_t = python::extract<int>(prev_orders[w_t_i]);
 			if(n_t != -1){
-				bool success = vpylm->remove(word_ids, w_t_i, n_t);
+				bool success = vpylm->remove_customer_at_timestep(word_ids, w_t_i, n_t);
 				if(success == false){
 					c_printf("[R]%s", "エラー");
 					c_printf("[n]%s", " 客を除去できませんでした\n");
@@ -73,8 +73,8 @@ public:
 
 		vector<int> new_order;
 		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){
-			int n_t = vpylm->sampleOrder(word_ids, w_t_i);
-			vpylm->add(word_ids, w_t_i, n_t);
+			int n_t = vpylm->sample_order(word_ids, w_t_i);
+			vpylm->add_customer_at_timestep(word_ids, w_t_i, n_t);
 			new_order.push_back(n_t);
 		}
 
@@ -82,20 +82,20 @@ public:
 	}
 
 	int get_max_depth(){
-		return vpylm->maxDepth();
+		return vpylm->get_max_depth();
 	}
 
 	int get_num_child_nodes(){
-		return vpylm->numChildNodes();
+		return vpylm->get_num_child_nodes();
 	}
 
 	int get_num_customers(){
-		return vpylm->numCustomers();
+		return vpylm->get_num_customers();
 	}
 
 	python::list get_node_count_for_each_depth(){
 		unordered_map<id, int> map;
-		vpylm->countNodeForEachDepth(map);
+		vpylm->count_node_of_each_depth(map);
 
 		std::vector<int> counts;
 		std::map<int, int> ordered(map.begin(), map.end());
@@ -119,7 +119,7 @@ public:
 	}
 
 	void sample_hyperparameters(){
-		vpylm->sampleHyperParams();
+		vpylm->sample_hyperparams();
 	}
 
 	python::list sample_orders(python::list &sentence){
@@ -131,8 +131,8 @@ public:
 
 		vector<int> new_order;
 		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){
-			int n_t = vpylm->sampleOrder(word_ids, w_t_i);
-			vpylm->add(word_ids, w_t_i, n_t);
+			int n_t = vpylm->sample_order(word_ids, w_t_i);
+			vpylm->add_customer_at_timestep(word_ids, w_t_i, n_t);
 			new_order.push_back(n_t);
 		}
 
@@ -145,7 +145,7 @@ public:
 		for(int i = 0; i<len; i++) {
 			word_ids.push_back(python::extract<id>(sentence[i]));
 		}
-		return vpylm->sampleNextWord(word_ids);
+		return vpylm->sample_next_token(word_ids);
 	}
 
 	double compute_log_Pw(python::list &sentence){

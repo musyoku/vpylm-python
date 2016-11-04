@@ -48,59 +48,69 @@ public:
 	}
 	
 	// n_tはw_tから見た深さ
-	bool add(vector<id> &context, int w_t_i, int n_t){
-		if(n_t > w_t_i){
+	bool add_customer_at_timestep(vector<id> &token_ids, int token_t_index, int n_t){
+		if(n_t > token_t_index){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 客を追加できません. 不正な深さです.\n");
 			return false;
 		}
 
-		id w_t = context[w_t_i];
-		Node* node = _root;
-		for(int depth = 1;depth <= n_t;depth++){
-			if(w_t_i - depth < 0){
-				return false;
-			}
-			id u_t = context[w_t_i - depth];
-			Node* child = node->find_child_node(u_t, true);
-			if(child == NULL){
-				// cout << "internal error occurred." << endl;
-				return false;
-			}
-			node = child;
+		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, n_t, true);
+		if(node == NULL){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 客を追加できません. ノードが見つかりません.\n");
+			return false;
 		}
+
+		id token_t = token_ids[token_t_index];
+
+		// "客が親から生成される確率"と自らが持つ経験分布の混合分布から次の客の座るテーブルが決まる
 		double parent_p_w = _g0;
 		if(node->_parent){
-			parent_p_w = node->_parent->Pw(w_t, _g0, _d_m, _theta_m);
+			parent_p_w = node->_parent->Pw(token_t, _g0, _d_m, _theta_m);
 		}
-		node->add_customer(w_t, parent_p_w, _d_m, _theta_m);
+		node->add_customer(token_t, parent_p_w, _d_m, _theta_m);
 		return true;
 	}
 
-	bool remove(vector<id> &context, int w_t_i, int n_t){
-		id w_t = context[w_t_i];
+	bool remove_customer_at_timestep(vector<id> &token_ids, int token_t_index, int n_t){
+		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, n_t, true);
+		if(node == NULL){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s", " 客を除去できません. ノードが見つかりません.\n");
+			return false;
+		}
+		id token_t = token_ids[token_t_index];
+		node->remove_customer(token_t);
+		// 客が一人もいなくなったらノードを削除する
+		if(node->need_to_remove_from_parent()){
+			node->remove_from_parent();
+		}
+		return true;
+	}
+
+	// 文脈を後ろ向きに_max_depthだけ辿る
+	Node* find_node_by_tracing_back_context(vector<id> &token_ids, int token_t_index, int n_t, bool generate_node_if_needed = false){
+		if(token_t_index - n_t < 0){
+			return NULL;
+		}
 		Node* node = _root;
 		for(int depth = 1;depth <= n_t;depth++){
-			id u_t = context[w_t_i - depth];
-			// cout << "u_t: " << u_t << endl;
-			Node* child = node->find_child_node(u_t);
+			id context_token_id = token_ids[token_t_index - depth];
+			Node* child = node->find_child_node(context_token_id, generate_node_if_needed);
 			if(child == NULL){
-				return false;
+				return NULL;
 			}
 			node = child;
 		}
-
-		bool should_remove_from_parent = false;
-		node->remove_customer(w_t, should_remove_from_parent);
-		if(should_remove_from_parent && node->_parent != NULL){
-			node->_parent->delete_child_node(node->_token_id);
-		}
-		return true;
+		return node;
 	}
 
-	int sampleOrder(vector<id> &context_ids, int w_t_i){
-		if(w_t_i == 0){
+	int sample_order(vector<id> &context_ids, int token_t_index){
+		if(token_t_index == 0){
 			return 0;
 		}
-		id w_t = context_ids[w_t_i];
+		id token_t = context_ids[token_t_index];
 		vector<double> probs;
 		double sum_p_stpp = 0;
 
@@ -111,11 +121,11 @@ public:
 		double p_pass = 0;
 		double Pw = 0;
 		Node* node = _root;
-		for(int n = 0;n <= w_t_i;n++){
+		for(int n = 0;n <= token_t_index;n++){
 			if(node){
-				Pw = node->Pw(w_t, _g0, _d_m, _theta_m);
-				double p_stop = node->p_stop(_beta_stop, _beta_pass);
-				p_pass = node->p_pass(_beta_stop, _beta_pass);
+				Pw = node->Pw(token_t, _g0, _d_m, _theta_m);
+				double p_stop = node->stop_probability(_beta_stop, _beta_pass);
+				p_pass = node->pass_probability(_beta_stop, _beta_pass);
 				double p = Pw * p_stop;
 				probs.push_back(p);
 				sum_p_stpp += p_stop;
@@ -124,9 +134,9 @@ public:
 				if(p < eps){
 					break;
 				}
-				if(n < w_t_i){
-					id u_t = context_ids[w_t_i - n - 1];
-					node = node->find_child_node(u_t);
+				if(n < token_t_index){
+					id context_token_id = context_ids[token_t_index - n - 1];
+					node = node->find_child_node(context_token_id);
 				}
 			}else{
 				double p_stop = p_pass * _beta_stop / (_beta_stop + _beta_pass);
@@ -167,11 +177,11 @@ public:
 		Node* node = _root;
 		int depth = 0;
 		for(;depth < context_ids.size();depth++){
-			id u_t = context_ids[context_ids.size() - depth - 1];
+			id context_token_id = context_ids[context_ids.size() - depth - 1];
 			if(node == NULL){
 				break;
 			}
-			Node* child = node->find_child_node(u_t);
+			Node* child = node->find_child_node(context_token_id);
 			if(child == NULL){
 				break;
 			}
@@ -201,11 +211,11 @@ public:
 		Node* node = _root;
 		int depth = 0;
 		for(;depth < n;depth++){
-			id u_t = context_ids[context_ids.size() - depth - 1];
+			id context_token_id = context_ids[context_ids.size() - depth - 1];
 			if(node == NULL){
 				break;
 			}
-			Node* child = node->find_child_node(u_t);
+			Node* child = node->find_child_node(context_token_id);
 			if(child == NULL){
 				break;
 			}
@@ -236,11 +246,11 @@ public:
 		Node* node = _root;
 		int depth = 0;
 		for(;depth < n;depth++){
-			id u_t = context_ids[context_ids.size() - depth - 1];
+			id context_token_id = context_ids[context_ids.size() - depth - 1];
 			if(node == NULL){
 				break;
 			}
-			Node* child = node->find_child_node(u_t);
+			Node* child = node->find_child_node(context_token_id);
 			if(child == NULL){
 				break;
 			}
@@ -253,7 +263,7 @@ public:
 			printf(" depth != n at VPYLM::Pn_h\n");
 			return 0;
 		}
-		return node->p_stop(_beta_stop, _beta_pass);
+		return node->stop_probability(_beta_stop, _beta_pass);
 	}
 
 	double Pw(vector<id> &word_ids){
@@ -261,7 +271,7 @@ public:
 			return 0;
 		}
 		id w_0 = word_ids[0];
-		double p0 = _root->Pw(w_0, _g0, _d_m, _theta_m) * _root->p_stop(_beta_stop, _beta_pass);
+		double p0 = _root->Pw(w_0, _g0, _d_m, _theta_m) * _root->stop_probability(_beta_stop, _beta_pass);
 		double p = p0;
 		vector<id> context_ids(word_ids.begin(), word_ids.begin() + 1);
 		for(int depth = 1;depth < word_ids.size();depth++){
@@ -278,7 +288,7 @@ public:
 			return 0;
 		}
 		id w_0 = word_ids[0];
-		double p0 = _root->Pw(w_0, _g0, _d_m, _theta_m) * _root->p_stop(_beta_stop, _beta_pass);
+		double p0 = _root->Pw(w_0, _g0, _d_m, _theta_m) * _root->stop_probability(_beta_stop, _beta_pass);
 		double p = log2(p0 + 1e-10);
 		vector<id> context_ids(word_ids.begin(), word_ids.begin() + 1);
 		for(int depth = 1;depth < word_ids.size();depth++){
@@ -290,24 +300,24 @@ public:
 		return p;
 	}
 
-	id sampleNextWord(vector<id> &context_ids){
-		int w_t_i = context_ids.size() - 1;
+	id sample_next_token(vector<id> &context_ids){
+		int token_t_index = context_ids.size() - 1;
 		Node* node = _root;
 		vector<double> probs;
 		vector<Node*> nodes;
-		double p = _root->p_stop(_beta_stop, _beta_pass);
+		double p = _root->stop_probability(_beta_stop, _beta_pass);
 		probs.push_back(p);
 		nodes.push_back(node);
 		double sum = 0;
 
-		for(int n = 0;n <= w_t_i;n++){
+		for(int n = 0;n <= token_t_index;n++){
 			if(node){
-				id u_t = context_ids[w_t_i - n];
-				node = node->find_child_node(u_t);
+				id context_token_id = context_ids[token_t_index - n];
+				node = node->find_child_node(context_token_id);
 				if(node == NULL){
 					break;
 				}
-				double p = node->p_stop(_beta_stop, _beta_pass);
+				double p = node->stop_probability(_beta_stop, _beta_pass);
 				probs.push_back(p);
 				nodes.push_back(node);
 				sum += p;
@@ -361,16 +371,16 @@ public:
 		return sampled_word_id;
 	}
 
-	int maxDepth(){
+	int get_max_depth(){
 		return _d_m.size() - 1;
 	}
 
-	int numChildNodes(){
-		return _root->numChildNodes();
+	int get_num_child_nodes(){
+		return _root->get_num_child_nodes();
 	}
 
-	int numCustomers(){
-		return _root->numCustomers();
+	int get_num_customers(){
+		return _root->get_num_customers();
 	}
 
 	int _sum_stop_counts(){
@@ -386,9 +396,9 @@ public:
 		boost::archive::binary_oarchive oarchive(ofs);
 		oarchive << static_cast<const VPYLM&>(*this);
 		// cout << "saved to " << filename << endl;
-		// cout << "	num_customers: " << numCustomers() << endl;
-		// cout << "	num_nodes: " << numChildNodes() << endl;
-		// cout << "	max_depth: " << maxDepth() << endl;
+		// cout << "	num_customers: " << get_num_customers() << endl;
+		// cout << "	num_nodes: " << get_num_child_nodes() << endl;
+		// cout << "	max_depth: " << get_max_depth() << endl;
 		return true;
 	}
 
@@ -399,9 +409,9 @@ public:
 			// cout << "loading " << filename << endl;
 			boost::archive::binary_iarchive iarchive(ifs);
 			iarchive >> *this;
-			// cout << "	num_customers: " << numCustomers() << endl;
-			// cout << "	num_nodes: " << numChildNodes() << endl;
-			// cout << "	max_depth: " << maxDepth() << endl;
+			// cout << "	num_customers: " << get_num_customers() << endl;
+			// cout << "	num_nodes: " << get_num_child_nodes() << endl;
+			// cout << "	max_depth: " << get_max_depth() << endl;
 			return true;
 		}
 		return false;
