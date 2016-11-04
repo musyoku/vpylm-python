@@ -148,7 +148,7 @@ public:
 		return vpylm->sample_next_token(word_ids);
 	}
 
-	double compute_log_Pw(python::list &sentence){
+	double log_Pw(python::list &sentence){
 		std::vector<id> word_ids;
 		int len = python::len(sentence);
 		for(int i = 0; i<len; i++) {
@@ -168,7 +168,7 @@ BOOST_PYTHON_MODULE(vpylm){
 	.def("get_discount_parameters", &PyVPYLM::get_discount_parameters)
 	.def("get_strength_parameters", &PyVPYLM::get_strength_parameters)
 	.def("sample_hyperparameters", &PyVPYLM::sample_hyperparameters)
-	.def("compute_log_Pw", &PyVPYLM::compute_log_Pw)
+	.def("log_Pw", &PyVPYLM::log_Pw)
 	.def("sample_next_word", &PyVPYLM::sample_next_word)
 	.def("sample_orders", &PyVPYLM::sample_orders)
 	.def("get_node_count_for_each_depth", &PyVPYLM::get_node_count_for_each_depth)

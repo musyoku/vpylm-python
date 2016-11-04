@@ -54,14 +54,12 @@ public:
 			c_printf("[n]%s", " 客を追加できません. 不正な深さです.\n");
 			return false;
 		}
-
 		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, n_t, true);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s", " 客を追加できません. ノードが見つかりません.\n");
 			return false;
 		}
-
 		id token_t = token_ids[token_t_index];
 
 		// "客が親から生成される確率"と自らが持つ経験分布の混合分布から次の客の座るテーブルが決まる
@@ -72,7 +70,6 @@ public:
 		node->add_customer(token_t, parent_p_w, _d_m, _theta_m);
 		return true;
 	}
-
 	bool remove_customer_at_timestep(vector<id> &token_ids, int token_t_index, int n_t){
 		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, n_t, true);
 		if(node == NULL){
@@ -88,7 +85,6 @@ public:
 		}
 		return true;
 	}
-
 	// 文脈を後ろ向きに_max_depthだけ辿る
 	Node* find_node_by_tracing_back_context(vector<id> &token_ids, int token_t_index, int n_t, bool generate_node_if_needed = false){
 		if(token_t_index - n_t < 0){
@@ -105,7 +101,6 @@ public:
 		}
 		return node;
 	}
-
 	int sample_order(vector<id> &context_ids, int token_t_index){
 		if(token_t_index == 0){
 			return 0;
@@ -150,7 +145,6 @@ public:
 				}
 			}
 		}
-
 		double ratio = 1.0 / sum;
 		uniform_real_distribution<double> rand(0, 1);
 		double r = rand(Sampler::mt);
@@ -163,7 +157,6 @@ public:
 		}
 		return probs.size() - 1;
 	}
-
 	double Pw_h(vector<id> &word_ids, vector<id> context_ids, bool fixed_depth = false){
 		double p = 1;
 		for(int n = 0;n < word_ids.size();n++){
@@ -172,7 +165,6 @@ public:
 		}
 		return p;
 	}
-
 	double Pw_h(id word_id, vector<id> &context_ids, bool fixed_depth = false){
 		Node* node = _root;
 		int depth = 0;
@@ -198,7 +190,6 @@ public:
 		}
 		return p;
 	}
-
 	double Pw_hn(id word_id, vector<id> &context_ids, int n){
 		if(n > context_ids.size()){
 			printf("\x1b[41;97m");
@@ -207,7 +198,6 @@ public:
 			printf(" n > context_ids.size() at VPYLM::Pw_hn\n");
 			return 0;
 		}
-
 		Node* node = _root;
 		int depth = 0;
 		for(;depth < n;depth++){
@@ -221,7 +211,6 @@ public:
 			}
 			node = child;
 		}
-
 		if(depth != n){
 			printf("\x1b[41;97m");
 			printf("WARNING");
@@ -229,11 +218,9 @@ public:
 			printf(" depth != n at VPYLM::Pw_hn\n");
 			return 0;
 		}
-
 		double p = node->Pw(word_id, _g0, _d_m, _theta_m);
 		return p;
 	}
-
 	double Pn_h(int n, vector<id> &context_ids){
 		if(n > context_ids.size()){
 			printf("\x1b[41;97m");
@@ -242,7 +229,6 @@ public:
 			printf(" n > context_ids.size() at VPYLM::Pw_h\n");
 			return 0;
 		}
-
 		Node* node = _root;
 		int depth = 0;
 		for(;depth < n;depth++){
@@ -265,7 +251,6 @@ public:
 		}
 		return node->stop_probability(_beta_stop, _beta_pass);
 	}
-
 	double Pw(vector<id> &word_ids){
 		if(word_ids.size() == 0){
 			return 0;
@@ -282,7 +267,6 @@ public:
 		}
 		return p;
 	}
-
 	double log_Pw(vector<id> &word_ids){
 		if(word_ids.size() == 0){
 			return 0;
@@ -299,7 +283,6 @@ public:
 		}
 		return p;
 	}
-
 	id sample_next_token(vector<id> &context_ids){
 		int token_t_index = context_ids.size() - 1;
 		Node* node = _root;
@@ -370,26 +353,21 @@ public:
 		}
 		return sampled_word_id;
 	}
-
 	int get_max_depth(){
 		return _d_m.size() - 1;
 	}
-
 	int get_num_child_nodes(){
 		return _root->get_num_child_nodes();
 	}
-
 	int get_num_customers(){
 		return _root->get_num_customers();
 	}
-
 	int _sum_stop_counts(){
 		return _root->_sum_stop_counts();
 	}
 	int _sum_pass_counts(){
 		return _root->_sum_pass_counts();
 	}
-
 	bool save(){
 		string filename = "vpylm.model";
 		std::ofstream ofs(filename);
@@ -401,7 +379,6 @@ public:
 		// cout << "	max_depth: " << get_max_depth() << endl;
 		return true;
 	}
-
 	bool load(){
 		string filename = "vpylm.model";
 		std::ifstream ifs(filename);

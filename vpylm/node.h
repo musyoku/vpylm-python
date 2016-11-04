@@ -180,7 +180,6 @@ public:
 		_children[token_id] = child;
 		return child;
 	}
-
 	bool add_customer(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m, bool update_n = true){
 		init_hyperparameters_at_depth_if_needed(_depth, d_m, theta_m);
 		double d_u = d_m[_depth];
@@ -222,7 +221,6 @@ public:
 		}
 		return true;
 	}
-
 	bool remove_customer(id token_id, bool update_n = true){
 		if(_arrangement.find(token_id) == _arrangement.end()){
 			return false;
@@ -254,15 +252,6 @@ public:
 		}
 		return true;
 	}
-
-	bool remove_from_parent(){
-		if(_parent == NULL){
-			return false;
-		}
-		_parent->delete_child_node(_token_id);
-		return true;
-	}
-
 	double Pw(id token_id, double g0, vector<double> &d_m, vector<double> &theta_m){
 		init_hyperparameters_at_depth_if_needed(_depth, d_m, theta_m);
 
@@ -353,6 +342,13 @@ public:
 			_parent->decrement_passC_count();
 		}
 	}
+	bool remove_from_parent(){
+		if(_parent == NULL){
+			return false;
+		}
+		_parent->delete_child_node(_token_id);
+		return true;
+	}
 	void delete_child_node(id token_id){
 		Node* child = find_child_node(token_id);
 		if(child){
@@ -360,9 +356,7 @@ public:
 			delete child;
 		}
 		if(_children.size() == 0 && _arrangement.size() == 0){
-			if(_parent != NULL){
-				_parent->delete_child_node(this->_token_id);
-			}
+			remove_from_parent();
 		}
 	}
 	int get_max_depth(int base){
@@ -375,7 +369,6 @@ public:
 		}
 		return max_depth;
 	}
-
 	int get_num_child_nodes(){
 		int num = _children.size();
 		for(auto elem: _children){
@@ -383,7 +376,6 @@ public:
 		}
 		return num;
 	}
-
 	int get_num_customers(){
 		int num = 0;
 		for(auto elem: _arrangement){
@@ -401,7 +393,6 @@ public:
 		}
 		return num;
 	}
-
 	int _sum_pass_counts(){
 		int sum = _pass_count;
 		for(auto elem: _children){
@@ -409,7 +400,6 @@ public:
 		}
 		return sum;
 	}
-
 	int _sum_stop_counts(){
 		int sum = _stop_count;
 		for(auto elem: _children){
@@ -417,7 +407,6 @@ public:
 		}
 		return sum;
 	}
-
 	void set_active_tokens(unordered_map<id, bool> &flags){
 		for(auto elem: _arrangement){
 			id token_id = elem.first;
@@ -427,7 +416,6 @@ public:
 			elem.second->set_active_tokens(flags);
 		}
 	}
-
 	void count_node_of_each_depth(unordered_map<id, int> &map){
 		for(auto elem: _arrangement){
 			id token_id = elem.first;
@@ -437,7 +425,6 @@ public:
 			elem.second->count_node_of_each_depth(map);
 		}
 	}
-
 	// dとθの推定用
 	// "A Bayesian Interpretation of Interpolated Kneser-Ney" Appendix C参照
 	// http://www.gatsby.ucl.ac.uk/~ywteh/research/compling/hpylm.pdf
@@ -503,7 +490,6 @@ public:
 		}
 		return sum_z_uwkj;
 	}
-
 	void init_hyperparameters_at_depth_if_needed(int depth, vector<double> &d_m, vector<double> &theta_m){
 		if(depth >= d_m.size()){
 			while(d_m.size() <= depth){
@@ -514,7 +500,6 @@ public:
 			}
 		}
 	}
-
 	friend ostream& operator<<(ostream& os, const Node& node){
 		os << "[Node." << node._identifier << ":id." << node._token_id << ":depth." << node._depth << "]" << endl;
 		os << "_num_tables: " << node._num_tables << ", _num_customers: " << node._num_customers << endl;
