@@ -317,6 +317,7 @@ public:
 		if(use_cache && _bottom != -1){
 			return _bottom;
 		}
+		_bottom = 0;
 		update_max_depth_recursively(_root);
 		return _bottom;
 	}
@@ -330,8 +331,8 @@ public:
 			update_max_depth_recursively(child);
 		}
 	}
-	int get_num_child_nodes(){
-		return _root->get_num_child_nodes();
+	int get_num_nodes(){
+		return _root->get_num_nodes();
 	}
 	int get_num_customers(){
 		return _root->get_num_customers();
@@ -349,7 +350,7 @@ public:
 		oarchive << static_cast<const HPYLM&>(*this);
 		cout << "saved to " << filename << endl;
 		cout << "	num_customers: " << get_num_customers() << endl;
-		cout << "	num_nodes: " << get_num_child_nodes() << endl;
+		cout << "	num_nodes: " << get_num_nodes() << endl;
 		cout << "	max_depth: " << get_max_depth() << endl;
 	}
 	void load(string dir = "model/"){

@@ -373,10 +373,10 @@ public:
 		}
 		return max_depth;
 	}
-	int get_num_child_nodes(){
+	int get_num_nodes(){
 		int num = _children.size();
 		for(auto elem: _children){
-			num += elem.second->get_num_child_nodes();
+			num += elem.second->get_num_nodes();
 		}
 		return num;
 	}
@@ -420,13 +420,13 @@ public:
 			elem.second->set_active_tokens(flags);
 		}
 	}
-	void count_node_of_each_depth(unordered_map<id, int> &map){
+	void count_node_of_each_depth(unordered_map<id, int> &counts){
 		for(auto elem: _arrangement){
 			id token_id = elem.first;
-			map[_depth + 1] += 1;
+			counts[_depth + 1] += 1;
 		}
 		for(auto elem: _children){
-			elem.second->count_node_of_each_depth(map);
+			elem.second->count_node_of_each_depth(counts);
 		}
 	}
 	// dとθの推定用
