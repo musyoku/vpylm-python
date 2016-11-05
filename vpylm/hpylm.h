@@ -4,6 +4,7 @@
 #include <random>
 #include <unordered_map> 
 #include <boost/serialization/serialization.hpp>
+#include <boost/serialization/base_object.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/vector.hpp>
@@ -52,6 +53,7 @@ public:
 		// 深さは0から始まることに注意
 		// バイグラムなら最大深さは1
 		_max_depth = ngram - 1;
+		_bottom = -1;
 
 		_root = new Node(0);
 		_root->_depth = 0;	// ルートは深さ0
@@ -70,24 +72,18 @@ public:
 		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, true);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 客を追加できません. ノードが見つかりません.\n");
+			c_printf("[n]%s\n", " 客を追加できません. ノードが見つかりません.");
 			return false;
 		}
 		id token_t = token_ids[token_t_index];
-
-		// "客が親から生成される確率"と自らが持つ経験分布の混合分布から次の客の座るテーブルが決まる
-		double parent_Pw = _g0;
-		if(node->parent_exists()){
-			parent_Pw = node->_parent->Pw(token_t, _g0, _d_m, _theta_m);
-		}
-		node->add_customer(token_t, parent_Pw, _d_m, _theta_m);
+		node->add_customer(token_t, _g0, _d_m, _theta_m);
 		return false;
 	}
 	bool remove_customer_at_timestep(vector<id> &token_ids, int token_t_index){
 		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, false);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 客を除去できません. ノードが見つかりません.\n");
+			c_printf("[n]%s\n", " 客を除去できません. ノードが見つかりません.");
 			return false;
 		}
 		id token_t = token_ids[token_t_index];
@@ -127,13 +123,13 @@ public:
 		// HPYLMでは深さは固定
 		if(context_token_ids.size() < _max_depth){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 単語確率を計算できません. context_token_ids.size() < _max_depth\n");
+			c_printf("[n]%s\n", " 単語確率を計算できません. context_token_ids.size() < _max_depth");
 			return -1;
 		}
 		Node* node = find_node_by_tracing_back_context(context_token_ids, token_id, false);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 単語確率を計算できません. node == NULL\n");
+			c_printf("[n]%s\n", " 単語確率を計算できません. node == NULL");
 			return -1;
 		}
 		return node->Pw(token_id, _g0, _d_m, _theta_m);
@@ -144,7 +140,7 @@ public:
 	double Pw(vector<id> &token_ids){
 		if(token_ids.size() < _max_depth + 1){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 単語確率を計算できません. token_ids.size() < _max_depth\n");
+			c_printf("[n]%s\n", " 単語確率を計算できません. token_ids.size() < _max_depth");
 			return -1;
 		}
 		double mul_Pw_h = 1;
@@ -159,7 +155,7 @@ public:
 	double log_Pw(vector<id> &token_ids){
 		if(token_ids.size() < _max_depth + 1){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 単語確率を計算できません. token_ids.size() < _max_depth\n");
+			c_printf("[n]%s\n", " 単語確率を計算できません. token_ids.size() < _max_depth");
 			return -1;
 		}
 		double sum_Pw_h = 0;
@@ -175,7 +171,7 @@ public:
 	double log2_Pw(vector<id> &token_ids){
 		if(token_ids.size() < _max_depth + 1){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 単語確率を計算できません. token_ids.size() < _max_depth\n");
+			c_printf("[n]%s\n", " 単語確率を計算できません. token_ids.size() < _max_depth");
 			return -1;
 		}
 		double sum_Pw_h = 0;
@@ -192,7 +188,7 @@ public:
 		Node* node = find_node_by_tracing_back_context(context_token_ids, context_token_ids.size() - 1, false);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " トークンを生成できません. ノードが見つかりません.\n");
+			c_printf("[n]%s\n", " トークンを生成できません. ノードが見つかりません.");
 			return eos_id;
 		}
 		vector<id> token_ids;
@@ -259,13 +255,13 @@ public:
 	}
 	// "A Bayesian Interpretation of Interpolated Kneser-Ney" Appendix C参照
 	// http://www.gatsby.ucl.ac.uk/~ywteh/research/compling/hpylm.pdf
-	void sum_auxiliary_variables_recursively(Node* node, vector<double> &sum_log_x_u_m, vector<double> &sum_y_ui_m, vector<double> &sum_1_y_ui_m, vector<double> &sum_1_z_uwkj_m){
+	void sum_auxiliary_variables_recursively(Node* node, vector<double> &sum_log_x_u_m, vector<double> &sum_y_ui_m, vector<double> &sum_1_y_ui_m, vector<double> &sum_1_z_uwkj_m, int &bottom){
 		for(auto elem: node->_children){
 			Node* child = elem.second;
 			int depth = child->_depth;
 
-			if(depth > _bottom){
-				_bottom = depth;
+			if(depth > bottom){
+				bottom = depth;
 			}
 			init_hyperparameters_at_depth_if_needed(depth);
 
@@ -276,12 +272,11 @@ public:
 			sum_1_y_ui_m[depth] += child->auxiliary_1_y_ui(d, theta);	// 1 - y_ui
 			sum_1_z_uwkj_m[depth] += child->auxiliary_1_z_uwkj(d);		// 1 - z_uwkj
 
-			sum_auxiliary_variables_recursively(child, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m);
+			sum_auxiliary_variables_recursively(child, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m, _bottom);
 		}
 	}
 	// dとθの推定
 	void sample_hyperparams(){
-		unordered_map<int, vector<Node*> > nodes_by_depth;
 		int max_depth = _d_m.size() - 1;
 
 		// 親ノードの深さが0であることに注意
@@ -296,11 +291,10 @@ public:
 		sum_1_y_ui_m[0] = _root->auxiliary_1_y_ui(_d_m[0], _theta_m[0]);	// 1 - y_ui
 		sum_1_z_uwkj_m[0] = _root->auxiliary_1_z_uwkj(_d_m[0]);				// 1 - z_uwkj
 
-
 		// それ以外
 		_bottom = 0;
 		// _bottomは以下を実行すると更新される
-		sum_auxiliary_variables_recursively(_root, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m);
+		sum_auxiliary_variables_recursively(_root, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m, _bottom);
 		init_hyperparameters_at_depth_if_needed(_bottom);
 
 		for(int u = 0;u <= _bottom;u++){
@@ -309,8 +303,7 @@ public:
 			_theta_m[u] = Sampler::gamma(_alpha_m[u] + sum_y_ui_m[u], 1 / (_beta_m[u] - sum_log_x_u_m[u]));
 		}
 		// 不要な深さのハイパーパラメータを削除
-		// この操作は不要かもしれない
-		int num_remove = _d_m.size() - _bottom;
+		int num_remove = _d_m.size() - _bottom - 1;
 		for(int n = 0;n < num_remove;n++){
 			_d_m.pop_back();
 			_theta_m.pop_back();
@@ -320,8 +313,22 @@ public:
 			_beta_m.pop_back();
 		}
 	}
-	int get_max_depth(){
-		return _d_m.size() - 1;
+	int get_max_depth(bool use_cache = true){
+		if(use_cache && _bottom != -1){
+			return _bottom;
+		}
+		update_max_depth_recursively(_root);
+		return _bottom;
+	}
+	void update_max_depth_recursively(Node* node){
+		for(auto elem: node->_children){
+			Node* child = elem.second;
+			int depth = child->_depth;
+			if(depth > _bottom){
+				_bottom = depth;
+			}
+			update_max_depth_recursively(child);
+		}
 	}
 	int get_num_child_nodes(){
 		return _root->get_num_child_nodes();

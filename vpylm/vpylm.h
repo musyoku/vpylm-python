@@ -11,6 +11,7 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/vector.hpp>
+#include "c_printf.h"
 #include "sampler.h"
 #include "hpylm.h"
 #include "node.h"
@@ -51,30 +52,24 @@ public:
 	bool add_customer_at_timestep(vector<id> &token_ids, int token_t_index, int n_t){
 		if(n_t > token_t_index){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 客を追加できません. 不正な深さです.\n");
+			c_printf("[n]%s\n", " 客を追加できません. 不正な深さです.");
 			return false;
 		}
 		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, n_t, true);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 客を追加できません. ノードが見つかりません.\n");
+			c_printf("[n]%s\n", " 客を追加できません. ノードが見つかりません.");
 			return false;
 		}
 		id token_t = token_ids[token_t_index];
-
-		// "客が親から生成される確率"と自らが持つ経験分布の混合分布から次の客の座るテーブルが決まる
-		double parent_p_w = _g0;
-		if(node->_parent){
-			parent_p_w = node->_parent->Pw(token_t, _g0, _d_m, _theta_m);
-		}
-		node->add_customer(token_t, parent_p_w, _d_m, _theta_m);
+		node->add_customer(token_t, _g0, _d_m, _theta_m);
 		return true;
 	}
 	bool remove_customer_at_timestep(vector<id> &token_ids, int token_t_index, int n_t){
 		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, n_t, true);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 客を除去できません. ノードが見つかりません.\n");
+			c_printf("[n]%s\n", " 客を除去できません. ノードが見つかりません.");
 			return false;
 		}
 		id token_t = token_ids[token_t_index];

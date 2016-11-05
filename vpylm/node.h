@@ -37,7 +37,7 @@ private:
 			return true;
 		}
 		c_printf("[R]%s", "エラー");
-		c_printf("[n]%s", " 客を追加できません. _arrangement.find(token_id) == _arrangement.end()\n");
+		c_printf("[n]%s\n", " 客を追加できません. _arrangement.find(token_id) == _arrangement.end()");
 		return false;
 	}
 	// 客をテーブルに追加
@@ -51,7 +51,7 @@ private:
 			return true;
 		}
 		c_printf("[R]%s", "エラー");
-		c_printf("[n]%s", " 客を追加できません. table_k < _arrangement[token_id].size()\n");
+		c_printf("[n]%s\n", " 客を追加できません. table_k < _arrangement[token_id].size()");
 		return false;
 	}
 	bool add_customer_to_new_table(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
@@ -66,7 +66,7 @@ private:
 	bool remove_customer_from_table(id token_id, int table_k){
 		if(_arrangement.find(token_id) == _arrangement.end()){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 客を除去できません. _arrangement.find(token_id) == _arrangement.end()\n");
+			c_printf("[n]%s\n", " 客を除去できません. _arrangement.find(token_id) == _arrangement.end()");
 			return false;
 		}
 		if(table_k < _arrangement[token_id].size()){
@@ -75,7 +75,7 @@ private:
 			_num_customers--;
 			if(tables[table_k] < 0){
 				c_printf("[R]%s", "エラー");
-				c_printf("[n]%s", " 客の管理に不具合があります. tables[table_k] < 0\n");
+				c_printf("[n]%s\n", " 客の管理に不具合があります. tables[table_k] < 0");
 				return false;
 			}
 			if(tables[table_k] == 0){
@@ -91,7 +91,7 @@ private:
 			return true;
 		}
 		c_printf("[R]%s", "エラー");
-		c_printf("[n]%s", " 客を除去できません. table_k < _arrangement[token_id].size()\n");
+		c_printf("[n]%s\n", " 客を除去できません. table_k < _arrangement[token_id].size()");
 		return false;
 	}
 	friend class boost::serialization::access;
@@ -180,10 +180,14 @@ public:
 		_children[token_id] = child;
 		return child;
 	}
-	bool add_customer(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m, bool update_n = true){
+	bool add_customer(id token_id, double g0, vector<double> &d_m, vector<double> &theta_m, bool update_n = true){
 		init_hyperparameters_at_depth_if_needed(_depth, d_m, theta_m);
 		double d_u = d_m[_depth];
 		double theta_u = theta_m[_depth];
+		double parent_Pw = g0;
+		if(_parent){
+			parent_Pw = _parent->Pw(token_id, g0, d_m, theta_m);
+		}
 
 		if(_arrangement.find(token_id) == _arrangement.end()){
 			add_customer_to_empty_arrangement(token_id, parent_Pw, d_m, theta_m);
@@ -320,7 +324,7 @@ public:
 		_stop_count--;
 		if(_stop_count < 0){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 停止回数の管理に不具合があります. _stop_count < 0\n");
+			c_printf("[n]%s\n", " 停止回数の管理に不具合があります. _stop_count < 0");
 		}
 		if(_parent != NULL){
 			_parent->decrement_passC_count();
@@ -336,7 +340,7 @@ public:
 		_pass_count--;
 		if(_pass_count < 0){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 通過回数の管理に不具合があります. _pass_count < 0\n");
+			c_printf("[n]%s\n", " 通過回数の管理に不具合があります. _pass_count < 0");
 		}
 		if(_parent != NULL){
 			_parent->decrement_passC_count();
@@ -386,7 +390,7 @@ public:
 		}
 		if(num != _num_customers){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " 客の管理に不具合があります. num != _num_customers\n");
+			c_printf("[n]%s\n", " 客の管理に不具合があります. num != _num_customers");
 		}
 		for(auto elem: _children){
 			num += elem.second->get_num_customers();
@@ -442,7 +446,7 @@ public:
 				double denominator = theta_u + d_u * (double)i;
 				if(denominator == 0){
 					c_printf("[R]%s", "エラー");
-					c_printf("[n]%s", " 0除算. denominator == 0\n");
+					c_printf("[n]%s\n", " 0除算. denominator == 0");
 					continue;
 				}
 				sum_y_ui += Sampler::bernoulli(theta_u / denominator);;
@@ -458,7 +462,7 @@ public:
 				double denominator = theta_u + d_u * (double)i;
 				if(denominator == 0){
 					c_printf("[R]%s", "エラー");
-					c_printf("[n]%s", " 0除算. denominator == 0\n");
+					c_printf("[n]%s\n", " 0除算. denominator == 0");
 					continue;
 				}
 				sum_1_y_ui += 1.0 - Sampler::bernoulli(theta_u / denominator);
@@ -480,7 +484,7 @@ public:
 					for(int j = 1;j <= c_uwk - 1;j++){
 						if(j - d_u == 0){
 							c_printf("[R]%s", "エラー");
-							c_printf("[n]%s", " 0除算. j - d_u == 0\n");
+							c_printf("[n]%s\n", " 0除算. j - d_u == 0");
 							continue;
 						}
 						sum_z_uwkj += 1 - Sampler::bernoulli((j - 1) / (j - d_u));
