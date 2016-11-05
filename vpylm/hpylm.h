@@ -348,10 +348,10 @@ public:
 		std::ofstream ofs(filename);
 		boost::archive::binary_oarchive oarchive(ofs);
 		oarchive << static_cast<const HPYLM&>(*this);
-		cout << "saved to " << filename << endl;
-		cout << "	num_customers: " << get_num_customers() << endl;
-		cout << "	num_nodes: " << get_num_nodes() << endl;
-		cout << "	max_depth: " << get_max_depth() << endl;
+		// cout << "saved to " << filename << endl;
+		// cout << "	num_customers: " << get_num_customers() << endl;
+		// cout << "	num_nodes: " << get_num_nodes() << endl;
+		// cout << "	max_depth: " << get_max_depth() << endl;
 	}
 	void load(string dir = "model/"){
 		string filename = dir + "hpylm.model";

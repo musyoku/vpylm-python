@@ -49,13 +49,13 @@ public:
 	}
 	
 	// n_tはw_tから見た深さ
-	bool add_customer_at_timestep(vector<id> &token_ids, int token_t_index, int n_t){
-		if(n_t > token_t_index){
+	bool add_customer_at_timestep(vector<id> &token_ids, int token_t_index, int order_t){
+		if(order_t > token_t_index){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " 客を追加できません. 不正な深さです.");
 			return false;
 		}
-		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, n_t, true);
+		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, order_t, true);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " 客を追加できません. ノードが見つかりません.");
@@ -65,8 +65,8 @@ public:
 		node->add_customer(token_t, _g0, _d_m, _theta_m);
 		return true;
 	}
-	bool remove_customer_at_timestep(vector<id> &token_ids, int token_t_index, int n_t){
-		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, n_t, true);
+	bool remove_customer_at_timestep(vector<id> &token_ids, int token_t_index, int order_t){
+		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, order_t, true);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " 客を除去できません. ノードが見つかりません.");
@@ -81,12 +81,12 @@ public:
 		return true;
 	}
 	// 文脈を後ろ向きに_max_depthだけ辿る
-	Node* find_node_by_tracing_back_context(vector<id> &token_ids, int token_t_index, int n_t, bool generate_node_if_needed = false){
-		if(token_t_index - n_t < 0){
+	Node* find_node_by_tracing_back_context(vector<id> &token_ids, int token_t_index, int order_t, bool generate_node_if_needed = false){
+		if(token_t_index - order_t < 0){
 			return NULL;
 		}
 		Node* node = _root;
-		for(int depth = 1;depth <= n_t;depth++){
+		for(int depth = 1;depth <= order_t;depth++){
 			id context_token_id = token_ids[token_t_index - depth];
 			Node* child = node->find_child_node(context_token_id, generate_node_if_needed);
 			if(child == NULL){
@@ -96,7 +96,7 @@ public:
 		}
 		return node;
 	}
-	int sample_order(vector<id> &context_ids, int token_t_index){
+	int sample_order_at_timestep(vector<id> &context_ids, int token_t_index){
 		if(token_t_index == 0){
 			return 0;
 		}
@@ -348,46 +348,31 @@ public:
 		}
 		return sampled_word_id;
 	}
-	int get_max_depth(){
-		return _d_m.size() - 1;
-	}
-	int get_num_child_nodes(){
-		return _root->get_num_child_nodes();
-	}
-	int get_num_customers(){
-		return _root->get_num_customers();
-	}
-	int _sum_stop_counts(){
-		return _root->_sum_stop_counts();
-	}
-	int _sum_pass_counts(){
-		return _root->_sum_pass_counts();
-	}
-	bool save(){
-		string filename = "vpylm.model";
-		std::ofstream ofs(filename);
-		boost::archive::binary_oarchive oarchive(ofs);
-		oarchive << static_cast<const VPYLM&>(*this);
-		// cout << "saved to " << filename << endl;
-		// cout << "	num_customers: " << get_num_customers() << endl;
-		// cout << "	num_nodes: " << get_num_child_nodes() << endl;
-		// cout << "	max_depth: " << get_max_depth() << endl;
-		return true;
-	}
-	bool load(){
-		string filename = "vpylm.model";
-		std::ifstream ifs(filename);
-		if(ifs.good()){
-			// cout << "loading " << filename << endl;
-			boost::archive::binary_iarchive iarchive(ifs);
-			iarchive >> *this;
-			// cout << "	num_customers: " << get_num_customers() << endl;
-			// cout << "	num_nodes: " << get_num_child_nodes() << endl;
-			// cout << "	max_depth: " << get_max_depth() << endl;
-			return true;
-		}
-		return false;
-	}
+	// void save(string dir = "model/"){
+	// 	string filename = "vpylm.model";
+	// 	std::ofstream ofs(filename);
+	// 	boost::archive::binary_oarchive oarchive(ofs);
+	// 	oarchive << static_cast<const VPYLM&>(*this);
+	// 	// cout << "saved to " << filename << endl;
+	// 	// cout << "	num_customers: " << get_num_customers() << endl;
+	// 	// cout << "	num_nodes: " << get_num_child_nodes() << endl;
+	// 	// cout << "	max_depth: " << get_max_depth() << endl;
+	// 	return true;
+	// }
+	// bool load(){
+	// 	string filename = "vpylm.model";
+	// 	std::ifstream ifs(filename);
+	// 	if(ifs.good()){
+	// 		// cout << "loading " << filename << endl;
+	// 		boost::archive::binary_iarchive iarchive(ifs);
+	// 		iarchive >> *this;
+	// 		// cout << "	num_customers: " << get_num_customers() << endl;
+	// 		// cout << "	num_nodes: " << get_num_child_nodes() << endl;
+	// 		// cout << "	max_depth: " << get_max_depth() << endl;
+	// 		return true;
+	// 	}
+	// 	return false;
+	// }
 };
 
 #endif
