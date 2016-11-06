@@ -48,7 +48,7 @@ public:
 		_beta_pass = 1;
 	}
 	
-	// n_tはw_tから見た深さ
+	// order_tはw_tから見た深さ
 	bool add_customer_at_timestep(vector<id> &token_ids, int token_t_index, int order_t){
 		if(order_t > token_t_index){
 			c_printf("[R]%s", "エラー");
@@ -80,7 +80,7 @@ public:
 		}
 		return true;
 	}
-	// 文脈を後ろ向きに_max_depthだけ辿る
+	// 文脈を後ろ向きにorder_tだけ辿る
 	Node* find_node_by_tracing_back_context(vector<id> &token_ids, int token_t_index, int order_t, bool generate_node_if_needed = false){
 		if(token_t_index - order_t < 0){
 			return NULL;

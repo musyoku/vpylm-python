@@ -23,30 +23,14 @@ using namespace std;
 
 class Node{
 private:
-	// 新しいテーブルを生成しそこに客を追加
-	bool add_customer_to_empty_arrangement(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
-		if(_arrangement.find(token_id) == _arrangement.end()){
-			vector<int> tables = {1};
-			_arrangement[token_id] = tables;
-			_num_customers++;
-			_num_tables++;
-			if(_parent != NULL){
-				// 親に代理客を送る
-				_parent->add_customer(token_id, parent_Pw, d_m, theta_m, false);
-			}
-			return true;
-		}
-		c_printf("[R]%s", "エラー");
-		c_printf("[n]%s\n", " 客を追加できません. _arrangement.find(token_id) == _arrangement.end()");
-		return false;
-	}
 	// 客をテーブルに追加
 	bool add_customer_to_table(id token_id, int table_k, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
 		if(_arrangement.find(token_id) == _arrangement.end()){
-			return add_customer_to_empty_arrangement(token_id, parent_Pw, d_m, theta_m);
+			return add_customer_to_new_table(token_id, parent_Pw, d_m, theta_m);
 		}
-		if(table_k < _arrangement[token_id].size()){
-			_arrangement[token_id][table_k]++;
+		vector<int> &num_customers_at_table = _arrangement[token_id];
+		if(table_k < num_customers_at_table.size()){
+			num_customers_at_table[table_k]++;
 			_num_customers++;
 			return true;
 		}
@@ -55,7 +39,12 @@ private:
 		return false;
 	}
 	bool add_customer_to_new_table(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
-		_arrangement[token_id].push_back(1);
+		if(_arrangement.find(token_id) == _arrangement.end()){
+			vector<int> tables = {1};
+			_arrangement[token_id] = tables;
+		}else{
+			_arrangement[token_id].push_back(1);
+		}
 		_num_tables++;
 		_num_customers++;
 		if(_parent != NULL){
@@ -69,30 +58,30 @@ private:
 			c_printf("[n]%s\n", " 客を除去できません. _arrangement.find(token_id) == _arrangement.end()");
 			return false;
 		}
-		if(table_k < _arrangement[token_id].size()){
-			vector<int> &tables = _arrangement[token_id];
-			tables[table_k]--;
-			_num_customers--;
-			if(tables[table_k] < 0){
-				c_printf("[R]%s", "エラー");
-				c_printf("[n]%s\n", " 客の管理に不具合があります. tables[table_k] < 0");
-				return false;
-			}
-			if(tables[table_k] == 0){
-				if(_parent != NULL){
-					_parent->remove_customer(token_id, false);
-				}
-				tables.erase(tables.begin() + table_k);
-				_num_tables--;
-				if(tables.size() == 0){
-					_arrangement.erase(token_id);
-				}
-			}
-			return true;
+		if(table_k >= _arrangement[token_id].size()){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s\n", " 客を除去できません. table_k >= _arrangement[token_id].size()");
+			return false;
 		}
-		c_printf("[R]%s", "エラー");
-		c_printf("[n]%s\n", " 客を除去できません. table_k < _arrangement[token_id].size()");
-		return false;
+		vector<int> &num_customers_at_table = _arrangement[token_id];
+		num_customers_at_table[table_k]--;
+		_num_customers--;
+		if(num_customers_at_table[table_k] < 0){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s\n", " 客の管理に不具合があります. num_customers_at_table[table_k] < 0");
+			return false;
+		}
+		if(num_customers_at_table[table_k] == 0){
+			if(_parent != NULL){
+				_parent->remove_customer(token_id, false);
+			}
+			num_customers_at_table.erase(num_customers_at_table.begin() + table_k);
+			_num_tables--;
+			if(num_customers_at_table.size() == 0){
+				_arrangement.erase(token_id);
+			}
+		}
+		return true;
 	}
 	friend class boost::serialization::access;
 	template <class Archive>
@@ -159,10 +148,10 @@ public:
 		if(_arrangement.find(token_id) == _arrangement.end()){
 			return 0;
 		}
-		vector<int> &tables = _arrangement[token_id];
+		vector<int> &num_customers_at_table = _arrangement[token_id];
 		int sum = 0;
-		for(int i = 0;i < tables.size();i++){
-			sum += tables[i];
+		for(int i = 0;i < num_customers_at_table.size();i++){
+			sum += num_customers_at_table[i];
 		}
 		return sum;
 	}
@@ -188,40 +177,39 @@ public:
 		if(_parent){
 			parent_Pw = _parent->Pw(token_id, g0, d_m, theta_m);
 		}
-
 		if(_arrangement.find(token_id) == _arrangement.end()){
-			add_customer_to_empty_arrangement(token_id, parent_Pw, d_m, theta_m);
+			add_customer_to_new_table(token_id, parent_Pw, d_m, theta_m);
 			if(update_n == true){
 				increment_stop_count();
 			}
-		}else{
-			vector<int> &tables = _arrangement[token_id];
-			double rand_max = 0.0;
-			for(int k = 0;k < tables.size();k++){
-				rand_max += std::max(0.0, tables[k] - d_u);
-			}
-			double t_u = (double)_num_tables;
-			rand_max += (theta_u + d_u * t_u) * parent_Pw;
+			return true;
+		}
+		vector<int> &num_customers_at_table = _arrangement[token_id];
+		double sum_props = 0.0;
+		for(int k = 0;k < num_customers_at_table.size();k++){
+			sum_props += std::max(0.0, num_customers_at_table[k] - d_u);
+		}
+		double t_u = _num_tables;
+		sum_props += (theta_u + d_u * t_u) * parent_Pw;
 
-			uniform_real_distribution<double> rand(0, rand_max);
-			double r = rand(Sampler::mt);
+		double normalizer = 1.0 / sum_props;
+		uniform_real_distribution<double> rand(0, 1);
+		double r = rand(Sampler::mt);
 
-			double sum = 0.0;
-			for(int k = 0;k < tables.size();k++){
-				sum += std::max(0.0, tables[k] - d_u);
-				if(r <= sum){
-					add_customer_to_table(token_id, k, parent_Pw, d_m, theta_m);
-					if(update_n){
-						increment_stop_count();
-					}
-					return false;
+		double sum_normalized_probs = 0.0;
+		for(int k = 0;k < num_customers_at_table.size();k++){
+			sum_normalized_probs += std::max(0.0, num_customers_at_table[k] - d_u) * normalizer;
+			if(r <= sum_normalized_probs){
+				add_customer_to_table(token_id, k, parent_Pw, d_m, theta_m);
+				if(update_n){
+					increment_stop_count();
 				}
+				return false;
 			}
-
-			add_customer_to_new_table(token_id, parent_Pw, d_m, theta_m);
-			if(update_n){
-				increment_stop_count();
-			}
+		}
+		add_customer_to_new_table(token_id, parent_Pw, d_m, theta_m);
+		if(update_n){
+			increment_stop_count();
 		}
 		return true;
 	}
@@ -230,19 +218,20 @@ public:
 			return false;
 		}
 
-		vector<int> &tables = _arrangement[token_id];
-		double max = 0.0;
-		for(int k = 0;k < tables.size();k++){
-			max += tables[k];
+		vector<int> &num_customers_at_table = _arrangement[token_id];
+		double sum_props = 0.0;
+		for(int k = 0;k < num_customers_at_table.size();k++){
+			sum_props += num_customers_at_table[k];
 		}
 		
-		uniform_real_distribution<double> rand(0, max);
+		double normalizer = 1.0 / sum_props;
+		uniform_real_distribution<double> rand(0, 1);
 		double r = rand(Sampler::mt);
 
-		double sum = 0.0;
-		for(int k = 0;k < tables.size();k++){
-			sum += tables[k];
-			if(r <= sum){
+		double sum_normalized_probs = 0.0;
+		for(int k = 0;k < num_customers_at_table.size();k++){
+			sum_normalized_probs += num_customers_at_table[k] * normalizer;
+			if(r <= sum_normalized_probs){
 				remove_customer_from_table(token_id, k);
 				if(update_n == true){
 					decrement_stop_count();
@@ -250,7 +239,7 @@ public:
 				return true;
 			}
 		}
-		remove_customer_from_table(token_id, tables.size() - 1);
+		remove_customer_from_table(token_id, num_customers_at_table.size() - 1);
 		if(update_n == true){
 			decrement_stop_count();
 		}
@@ -258,47 +247,27 @@ public:
 	}
 	double Pw(id token_id, double g0, vector<double> &d_m, vector<double> &theta_m){
 		init_hyperparameters_at_depth_if_needed(_depth, d_m, theta_m);
-
 		double d_u = d_m[_depth];
 		double theta_u = theta_m[_depth];
-		double t_u = (double)_num_tables;
-		double c_u = (double)_num_customers;
-		double mult = (theta_u + d_u * t_u) / (theta_u + c_u);
+		double t_u = _num_tables;
+		double c_u = _num_customers;
 		if(_arrangement.find(token_id) == _arrangement.end()){
+			double coeff = (theta_u + d_u * t_u) / (theta_u + c_u);
 			if(_parent != NULL){
-				return _parent->Pw(token_id, g0, d_m, theta_m) * mult;
+				return _parent->Pw(token_id, g0, d_m, theta_m) * coeff;
 			}
-			return g0 * mult;
+			return g0 * coeff;
 		}
+		double parent_Pw = g0;
 		if(_parent != NULL){
-			vector<int> &tables = _arrangement[token_id];
-			double c_uw = std::accumulate(tables.begin(), tables.end(), 0);
-			double t_uw = tables.size();
-
-			double first_coeff = (c_uw - d_u * t_uw) / (theta_u + c_u);
-			if(first_coeff < 0){
-				first_coeff = 0;
-			}
-			double second_coeff = (theta_u + d_u * t_u) / (theta_u + c_u);
-
-			double parent_p = _parent->Pw(token_id, g0, d_m, theta_m);
-			double p = first_coeff + second_coeff * parent_p;
-			return p;
+			parent_Pw = _parent->Pw(token_id, g0, d_m, theta_m);
 		}
-
-		vector<int> &tables = _arrangement[token_id];
-		double c_uw = std::accumulate(tables.begin(), tables.end(), 0);
-		double t_uw = tables.size();
-
-		double first_coeff = (c_uw - d_u * t_uw) / (theta_u + c_u);
-		if(first_coeff < 0){
-			first_coeff = 0;
-		}
+		vector<int> &num_customers_at_table = _arrangement[token_id];
+		double c_uw = std::accumulate(num_customers_at_table.begin(), num_customers_at_table.end(), 0);
+		double t_uw = num_customers_at_table.size();
+		double first_coeff = std::max(0.0, c_uw - d_u * t_uw) / (theta_u + c_u);
 		double second_coeff = (theta_u + d_u * t_u) / (theta_u + c_u);
-
-		double p = first_coeff + second_coeff * g0;
-		return p;
-
+		return first_coeff + second_coeff * parent_Pw;
 	}
 	double stop_probability(double beta_stop, double beta_pass){
 		double p = (_stop_count + beta_stop) / (_stop_count + _pass_count + beta_stop + beta_pass);
@@ -380,12 +349,26 @@ public:
 		}
 		return num;
 	}
+	int get_num_tables(){
+		int num = 0;
+		for(auto elem: _arrangement){
+			num += elem.second.size();
+		}
+		if(num != _num_tables){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s\n", " テーブルの管理に不具合があります. num != _num_tables");
+		}
+		for(auto elem: _children){
+			num += elem.second->get_num_tables();
+		}
+		return num;
+	}
 	int get_num_customers(){
 		int num = 0;
 		for(auto elem: _arrangement){
-			vector<int> customers = elem.second;
-			for(int i = 0;i < customers.size();i++){
-				num += customers[i];
+			vector<int> &num_customers_at_table = elem.second;
+			for(int i = 0;i < num_customers_at_table.size();i++){
+				num += num_customers_at_table[i];
 			}
 		}
 		if(num != _num_customers){
@@ -397,17 +380,17 @@ public:
 		}
 		return num;
 	}
-	int _sum_pass_counts(){
+	int sum_pass_counts(){
 		int sum = _pass_count;
 		for(auto elem: _children){
-			sum += elem.second->_sum_pass_counts();
+			sum += elem.second->sum_pass_counts();
 		}
 		return sum;
 	}
-	int _sum_stop_counts(){
+	int sum_stop_counts(){
 		int sum = _stop_count;
 		for(auto elem: _children){
-			sum += elem.second->_sum_pass_counts();
+			sum += elem.second->sum_stop_counts();
 		}
 		return sum;
 	}
@@ -476,10 +459,10 @@ public:
 		// c_u..
 		for(auto elem: _arrangement){
 			// c_uw.
-			vector<int> &tables = elem.second;
-			for(int k = 0;k < tables.size();k++){
+			vector<int> &num_customers_at_table = elem.second;
+			for(int k = 0;k < num_customers_at_table.size();k++){
 				// c_uwk
-				int c_uwk = tables[k];
+				int c_uwk = num_customers_at_table[k];
 				if(c_uwk >= 2){
 					for(int j = 1;j <= c_uwk - 1;j++){
 						if(j - d_u == 0){

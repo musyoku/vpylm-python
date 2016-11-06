@@ -67,6 +67,9 @@ public:
 			_beta_m.push_back(PYLM_INITIAL_BETA);
 		}
 	}
+	void set_g0(double g0){
+		_g0 = g0;
+	}
 	// 単語列のindex番目の単語をモデルに追加
 	bool add_customer_at_timestep(vector<id> &token_ids, int token_t_index){
 		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, true);
@@ -336,6 +339,15 @@ public:
 	}
 	int get_num_customers(){
 		return _root->get_num_customers();
+	}
+	int get_num_tables(){
+		return _root->get_num_tables();
+	}
+	int get_sum_stop_counts(){
+		return _root->sum_stop_counts();
+	}
+	int get_sum_pass_counts(){
+		return _root->sum_pass_counts();
 	}
 	void set_active_tokens(unordered_map<id, bool> &flags){
 		_root->set_active_tokens(flags);

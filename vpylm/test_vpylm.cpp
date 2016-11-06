@@ -29,12 +29,13 @@ int main(int argc, char *argv[]){
 	vector<wstring> dataset;
 
 	VPYLM* vpylm = new VPYLM();
+	vpylm->set_g0(1.0 / 10.0);
 	vector<id> token_ids;
 	for(int i = 0;i < 5000;i++){
-		token_ids.push_back(i);
+		token_ids.push_back(i % 10);
 	}
 	vector<int> prev_orders(5000, -1);
-	int max_epoch = 50;
+	int max_epoch = 500;
 	for(int epoch = 0;epoch < max_epoch;epoch++){
 		for(int token_t_index = 0;token_t_index < token_ids.size();token_t_index++){
 			int prev_order_t = prev_orders[token_t_index];
@@ -46,14 +47,20 @@ int main(int argc, char *argv[]){
 			prev_orders[token_t_index] = order_t;
 		}
 	}
-	printf("%d\n", vpylm->get_max_depth(false));
-	printf("%d\n", vpylm->get_num_nodes());
-	printf("%d\n", vpylm->get_num_customers());
+	printf("depth: %d\n", vpylm->get_max_depth(false));
+	printf("# of nodes: %d\n", vpylm->get_num_nodes());
+	printf("# of customers: %d\n", vpylm->get_num_customers());
+	printf("# of tables: %d\n", vpylm->get_num_tables());
+	printf("stop count: %d\n", vpylm->get_sum_stop_counts());
+	printf("pass count: %d\n", vpylm->get_sum_pass_counts());
 	vpylm->save("./");
 	vpylm->load("./");
-	printf("%d\n", vpylm->get_max_depth(false));
-	printf("%d\n", vpylm->get_num_nodes());
-	printf("%d\n", vpylm->get_num_customers());
+	printf("depth: %d\n", vpylm->get_max_depth(false));
+	printf("# of nodes: %d\n", vpylm->get_num_nodes());
+	printf("# of customers: %d\n", vpylm->get_num_customers());
+	printf("# of tables: %d\n", vpylm->get_num_tables());
+	printf("stop count: %d\n", vpylm->get_sum_stop_counts());
+	printf("pass count: %d\n", vpylm->get_sum_pass_counts());
 	for(int epoch = 0;epoch < 1;epoch++){
 		for(int token_t_index = 0;token_t_index < token_ids.size();token_t_index++){
 			int prev_order_t = prev_orders[token_t_index];
@@ -63,7 +70,10 @@ int main(int argc, char *argv[]){
 		}
 	}
 	vpylm->sample_hyperparams();
-	printf("%d\n", vpylm->get_max_depth(false));
-	printf("%d\n", vpylm->get_num_nodes());
-	printf("%d\n", vpylm->get_num_customers());
+	printf("depth: %d\n", vpylm->get_max_depth(false));
+	printf("# of nodes: %d\n", vpylm->get_num_nodes());
+	printf("# of customers: %d\n", vpylm->get_num_customers());
+	printf("# of tables: %d\n", vpylm->get_num_tables());
+	printf("stop count: %d\n", vpylm->get_sum_stop_counts());
+	printf("pass count: %d\n", vpylm->get_sum_pass_counts());
 }
