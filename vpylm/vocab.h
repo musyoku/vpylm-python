@@ -15,109 +15,110 @@
 #include <boost/serialization/vector.hpp>
 
 using namespace std;
-using id = unsigned long;
+using id = unsigned long long;
 
 class Vocab{
 private:
 	// wstring -> characters -> word
-	unordered_map<wchar_t, id> char_dict;
-	unordered_map<id, wchar_t> char_dict_inv;
-	unordered_map<id, vector<id> > word_dict;
-	map<vector<id>, id> word_dict_inv;
-	vector<id> reusable_ids;
-	vector<id> null_word;
+	unordered_map<wstring, id> _token_id_by_wstring;
+	unordered_map<id, wstring> _wstring_by_token_id;
+	unordered_map<id, vector<id> > _word_dict;
+	map<vector<id>, id> _word_dict_inv;
+	vector<id> _reusable_ids;
+	vector<id> _null_word;
 	id _auto_increment;
-	id bos_id;
-	id eos_id;
+	id _unk_id;
+	id _bos_id;
+	id _eos_id;
 	
 	friend class boost::serialization::access;
 	template <class Archive>
 	void serialize(Archive& archive, unsigned int version)
 	{
 		static_cast<void>(version); // No use
-		archive & char_dict;
-		archive & char_dict_inv;
-		archive & word_dict;
-		archive & word_dict_inv;
-		archive & reusable_ids;
+		archive & _token_id_by_wstring;
+		archive & _wstring_by_token_id;
+		archive & _word_dict;
+		archive & _word_dict_inv;
+		archive & _reusable_ids;
 		archive & _auto_increment;
 	}
 
 public:
 	Vocab(){
-		bos_id = 0;
-		eos_id = 1;
-		char_dict_inv[bos_id] = L'^';
-		char_dict_inv[eos_id] = L'$';
-		_auto_increment = eos_id;
-		null_word = {0};
+		_bos_id = 0;
+		_eos_id = 1;
+		_wstring_by_token_id[_bos_id] = L'^';
+		_wstring_by_token_id[_eos_id] = L'$';
+		_auto_increment = _eos_id;
+		_null_word = {0};
 	}
 	id generateId(){
-		if(reusable_ids.size() == 0){
+		if(_reusable_ids.size() == 0){
 			_auto_increment++;
 			return _auto_increment;
 		}
-		id used_id = reusable_ids.back();
-		reusable_ids.pop_back();
+		id used_id = _reusable_ids.back();
+		_reusable_ids.pop_back();
 		return used_id;
 	}
-	void addCharacter(wchar_t ch){
-		if(char_dict.find(ch) == char_dict.end()){
+	void addCharacter(wstring ch){
+		if(_token_id_by_wstring.find(ch) == _token_id_by_wstring.end()){
 			id gen_id = generateId();
-			char_dict[ch] = gen_id;
-			char_dict_inv[gen_id] = ch;
-			if(word_dict.find(gen_id) == word_dict.end()){
-				word_dict[gen_id] = {gen_id};
+			_token_id_by_wstring[ch] = gen_id;
+			_wstring_by_token_id[gen_id] = ch;
+			if(_word_dict.find(gen_id) == _word_dict.end()){
+				_word_dict[gen_id] = {gen_id};
 			}
 		}
 	}
-	id char2id(wchar_t ch){
-		auto itr = char_dict.find(ch);
-		if(itr == char_dict.end()){
+	id char2id(wstring ch){
+		auto itr = _token_id_by_wstring.find(ch);
+		if(itr == _token_id_by_wstring.end()){
 			id gen_id = generateId();
-			char_dict[ch] = gen_id;
-			char_dict_inv[gen_id] = ch;
+			_token_id_by_wstring[ch] = gen_id;
+			_wstring_by_token_id[gen_id] = ch;
 			return gen_id;
 		}
 		return itr->second;
 	}
-	wchar_t id2char(id id){
-		if(char_dict_inv.find(id) == char_dict_inv.end()){
+	wstring id2char(id id){
+		if(_wstring_by_token_id.find(id) == _wstring_by_token_id.end()){
 			return L' ';
 		}
-		return char_dict_inv[id];
+		return _wstring_by_token_id[id];
 	}
 	id characters2word(vector<id> &char_ids){
 		if(char_ids.size() == 1){
 			return char_ids[0];
 		}
-		auto itr = word_dict_inv.find(char_ids);
-		if(itr == word_dict_inv.end()){
+		auto itr = _word_dict_inv.find(char_ids);
+		if(itr == _word_dict_inv.end()){
 			id gen_id = generateId();
-			word_dict_inv[char_ids] = gen_id;
+			_word_dict_inv[char_ids] = gen_id;
 			// cout << "word vocab generated " << gen_id << endl;
-			word_dict[gen_id] = char_ids;
+			_word_dict[gen_id] = char_ids;
 			return gen_id;
 		}
 		return itr->second;
 	}
 	vector<id> &word2characters(id word_id){
-		auto itr = word_dict.find(word_id); 
-		if (itr == word_dict.end()) {
-			return null_word;
+		auto itr = _word_dict.find(word_id); 
+		if (itr == _word_dict.end()) {
+			return _null_word;
 		}
 		return itr->second;
 	}
 	wstring word2string(id word_id){
-		if(word_dict.find(word_id) == word_dict.end()){
-			if(char_dict_inv.find(word_id) == char_dict_inv.end()){
+		if(_word_dict.find(word_id) == _word_dict.end()){
+			if(_wstring_by_token_id.find(word_id) == _wstring_by_token_id.end()){
 				return L"";
 			}
 			wstring str;
 			str += id2char(word_id);
 			return str;
 		}
-		vector<id> &char_ids = word_dict[word_id];
+		vector<id> &char_ids = _word_dict[word_id];
 		return characters2string(char_ids);
 	}
 	wstring characters2string(vector<id> &char_ids){
@@ -134,16 +135,16 @@ public:
 		}
 	}
 	int numWords(){
-		return word_dict.size();
+		return _word_dict.size();
 	}
 	int numCharacters(){
-		return char_dict.size();
+		return _token_id_by_wstring.size();
 	}
 	id eosId(){
-		return eos_id;
+		return _eos_id;
 	}
 	id bosId(){
-		return bos_id;
+		return _bos_id;
 	}
 	id autoIncrement(){
 		return _auto_increment;
@@ -157,7 +158,7 @@ public:
 		cout << "	num_words: " << numWords() << endl;
 		cout << "	num_characters: " << numCharacters() << endl;
 		cout << "	auto_increment: " << _auto_increment << endl;
-		cout << "	num_reusable_ids: " << reusable_ids.size() << endl;
+		cout << "	num_reusable_ids: " << _reusable_ids.size() << endl;
 	}
 
 	void load(string dir = "model/"){
@@ -170,13 +171,13 @@ public:
 			cout << "	num_words: " << numWords() << endl;
 			cout << "	num_characters: " << numCharacters() << endl;
 			cout << "	auto_increment: " << _auto_increment << endl;
-			cout << "	num_reusable_ids: " << reusable_ids.size() << endl;
+			cout << "	num_reusable_ids: " << _reusable_ids.size() << endl;
 		}
 	}
 	void dump(){
-		for(auto kv : char_dict_inv) {
+		for(auto kv : _wstring_by_token_id) {
 			int key = kv.first;
-			wchar_t charactor = kv.second;
+			wstring charactor = kv.second;
 			wcout << key << ": " << charactor << endl;
 		} 
 	}
@@ -184,23 +185,23 @@ public:
 		unordered_map<id, vector<id> > new_word_dict;
 		map<vector<id>, id> new_word_dict_inv;
 		
-		for(auto elem: word_dict){
+		for(auto elem: _word_dict){
 			id word_id = elem.first;
 			if(active_keys.find(word_id) == active_keys.end()){
-				if(char_dict_inv.find(word_id) == char_dict_inv.end()){
-					reusable_ids.push_back(word_id);
+				if(_wstring_by_token_id.find(word_id) == _wstring_by_token_id.end()){
+					_reusable_ids.push_back(word_id);
 				}
 			}else{
-				vector<id> dict = word_dict[word_id];
+				vector<id> dict = _word_dict[word_id];
 				new_word_dict[word_id] = dict;
 				new_word_dict_inv[dict] = word_id;
 			}
 		}
 
-		word_dict.clear();
-		word_dict_inv.clear();
-		word_dict = new_word_dict;
-		word_dict_inv = new_word_dict_inv;
+		_word_dict.clear();
+		_word_dict_inv.clear();
+		_word_dict = new_word_dict;
+		_word_dict_inv = new_word_dict_inv;
 	}
 };
 

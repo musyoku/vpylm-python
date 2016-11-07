@@ -21,7 +21,7 @@
 
 using namespace std;
 
-Vocab* load(string &filename, vector<wstring> &dataset){
+Vocab* load_textfile(string &filename, vector<wstring> &dataset){
 	wifstream ifs(filename.c_str());
 	wstring str;
 	if (ifs.fail())
@@ -356,7 +356,7 @@ int main(int argc, char *argv[]){
 		}
 	}
 
-	Vocab* vocab = load(filename, dataset);
+	Vocab* vocab = load_textfile(filename, dataset);
 
 	train_vpylm(vocab, dataset, model_dir);
 	vpylm_generate_sentence(vocab, dataset, model_dir);

@@ -66,7 +66,6 @@ def train():
 			index = indices[train_step]
 			line = line_list[index]
 			prev_order = prev_order_list[index]
-			print prev_order
 			new_order = model.perform_gibbs_sampling(line, False if prev_order == -1 else True)
 			prev_order_list[index] = ngram
 
