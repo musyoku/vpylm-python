@@ -89,8 +89,8 @@ def train():
 		for train_step in xrange(n_data):
 			index = indices[train_step]
 			line = line_list[index]
-			prev_order = prev_order_list[index]
-			new_order = model.perform_gibbs_sampling(line, prev_order)
+			prev_orders = prev_order_list[index]
+			new_order = model.perform_gibbs_sampling(line, prev_orders)
 			prev_order_list[index] = new_order[:]
 
 			if train_step % (n_data // 200) == 0 or train_step == n_data - 1:

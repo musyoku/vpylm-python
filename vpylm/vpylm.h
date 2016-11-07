@@ -62,8 +62,7 @@ public:
 			return false;
 		}
 		id token_t = token_ids[token_t_index];
-		node->add_customer(token_t, _g0, _d_m, _theta_m);
-		return true;
+		return node->add_customer(token_t, _g0, _d_m, _theta_m);
 	}
 	bool remove_customer_at_timestep(vector<id> &token_ids, int token_t_index, int order_t){
 		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, order_t, true);
@@ -74,27 +73,12 @@ public:
 		}
 		id token_t = token_ids[token_t_index];
 		node->remove_customer(token_t);
+
 		// 客が一人もいなくなったらノードを削除する
 		if(node->need_to_remove_from_parent()){
 			node->remove_from_parent();
 		}
 		return true;
-	}
-	// 文脈を後ろ向きにorder_tだけ辿る
-	Node* find_node_by_tracing_back_context(vector<id> &token_ids, int token_t_index, int order_t, bool generate_node_if_needed = false){
-		if(token_t_index - order_t < 0){
-			return NULL;
-		}
-		Node* node = _root;
-		for(int depth = 1;depth <= order_t;depth++){
-			id context_token_id = token_ids[token_t_index - depth];
-			Node* child = node->find_child_node(context_token_id, generate_node_if_needed);
-			if(child == NULL){
-				return NULL;
-			}
-			node = child;
-		}
-		return node;
 	}
 	int sample_order_at_timestep(vector<id> &context_ids, int token_t_index){
 		if(token_t_index == 0){

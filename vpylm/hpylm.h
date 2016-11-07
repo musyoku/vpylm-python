@@ -16,6 +16,7 @@
 
 class HPYLM{
 private:
+	int _hpylm_depth;				// 最大の深さ
 	friend class boost::serialization::access;
 	template <class Archive>
 	// モデルの保存
@@ -23,7 +24,7 @@ private:
 	{
 		static_cast<void>(version); // No use
 		archive & _root;
-		archive & _max_depth;
+		archive & _hpylm_depth;
 		archive & _g0;
 		archive & _d_m;
 		archive & _theta_m;
@@ -34,8 +35,7 @@ private:
 	}
 public:
 	Node* _root;				// 文脈木のルートノード
-	int _max_depth;				// 最大の深さ
-	int _bottom;				// VPYLMへ拡張時に使う
+	int _max_depth;				// VPYLMへ拡張時に使う
 	double _g0;					// ゼログラム確率
 
 	// 深さmのノードに関するパラメータ
@@ -52,8 +52,8 @@ public:
 	HPYLM(int ngram = 2){
 		// 深さは0から始まることに注意
 		// バイグラムなら最大深さは1
-		_max_depth = ngram - 1;
-		_bottom = -1;
+		_hpylm_depth = ngram - 1;
+		_max_depth = -1;
 
 		_root = new Node(0);
 		_root->_depth = 0;	// ルートは深さ0
@@ -72,7 +72,7 @@ public:
 	}
 	// 単語列のindex番目の単語をモデルに追加
 	bool add_customer_at_timestep(vector<id> &token_ids, int token_t_index){
-		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, true);
+		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, _hpylm_depth, true);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " 客を追加できません. ノードが見つかりません.");
@@ -83,7 +83,7 @@ public:
 		return false;
 	}
 	bool remove_customer_at_timestep(vector<id> &token_ids, int token_t_index){
-		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, false);
+		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, _hpylm_depth, false);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " 客を除去できません. ノードが見つかりません.");
@@ -97,15 +97,13 @@ public:
 		}
 		return true;
 	}
-	// 文脈を後ろ向きに_max_depthだけ辿る
-	Node* find_node_by_tracing_back_context(vector<id> &token_ids, int token_t_index, bool generate_node_if_needed = false){
-		// HPYLMでは深さは固定
-		if(token_t_index < _max_depth){
+	Node* find_node_by_tracing_back_context(vector<id> &token_ids, int token_t_index, int order_t, bool generate_node_if_needed = false){
+		if(token_t_index - order_t < 0){
 			return NULL;
 		}
 		Node* node = _root;
-		for(int depth = 0;depth < _max_depth;depth++){
-			id context_token_id = token_ids[token_t_index - depth - 1];
+		for(int depth = 1;depth <= order_t;depth++){
+			id context_token_id = token_ids[token_t_index - depth];
 			Node* child = node->find_child_node(context_token_id, generate_node_if_needed);
 			if(child == NULL){
 				return NULL;
@@ -124,12 +122,12 @@ public:
 	}
 	double Pw_h(id token_id, vector<id> &context_token_ids){
 		// HPYLMでは深さは固定
-		if(context_token_ids.size() < _max_depth){
+		if(context_token_ids.size() < _hpylm_depth){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " 単語確率を計算できません. context_token_ids.size() < _max_depth");
+			c_printf("[n]%s\n", " 単語確率を計算できません. context_token_ids.size() < _hpylm_depth");
 			return -1;
 		}
-		Node* node = find_node_by_tracing_back_context(context_token_ids, token_id, false);
+		Node* node = find_node_by_tracing_back_context(context_token_ids, token_id, _hpylm_depth, false);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " 単語確率を計算できません. node == NULL");
@@ -141,14 +139,14 @@ public:
 		return _root->Pw(token_id, _g0, _d_m, _theta_m);
 	}
 	double Pw(vector<id> &token_ids){
-		if(token_ids.size() < _max_depth + 1){
+		if(token_ids.size() < _hpylm_depth + 1){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " 単語確率を計算できません. token_ids.size() < _max_depth");
+			c_printf("[n]%s\n", " 単語確率を計算できません. token_ids.size() < _hpylm_depth");
 			return -1;
 		}
 		double mul_Pw_h = 1;
-		vector<id> context_token_ids(token_ids.begin(), token_ids.begin() + _max_depth);
-		for(int depth = _max_depth;depth < token_ids.size();depth++){
+		vector<id> context_token_ids(token_ids.begin(), token_ids.begin() + _hpylm_depth);
+		for(int depth = _hpylm_depth;depth < token_ids.size();depth++){
 			id token_id = token_ids[depth];
 			mul_Pw_h *= Pw_h(token_id, context_token_ids);;
 			context_token_ids.push_back(token_id);
@@ -156,14 +154,14 @@ public:
 		return mul_Pw_h;
 	}
 	double log_Pw(vector<id> &token_ids){
-		if(token_ids.size() < _max_depth + 1){
+		if(token_ids.size() < _hpylm_depth + 1){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " 単語確率を計算できません. token_ids.size() < _max_depth");
+			c_printf("[n]%s\n", " 単語確率を計算できません. token_ids.size() < _hpylm_depth");
 			return -1;
 		}
 		double sum_Pw_h = 0;
-		vector<id> context_token_ids(token_ids.begin(), token_ids.begin() + _max_depth);
-		for(int depth = _max_depth;depth < token_ids.size();depth++){
+		vector<id> context_token_ids(token_ids.begin(), token_ids.begin() + _hpylm_depth);
+		for(int depth = _hpylm_depth;depth < token_ids.size();depth++){
 			id token_id = token_ids[depth];
 			double prob = Pw_h(token_id, context_token_ids);
 			sum_Pw_h += log(prob + 1e-10);
@@ -172,14 +170,14 @@ public:
 		return sum_Pw_h;
 	}
 	double log2_Pw(vector<id> &token_ids){
-		if(token_ids.size() < _max_depth + 1){
+		if(token_ids.size() < _hpylm_depth + 1){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " 単語確率を計算できません. token_ids.size() < _max_depth");
+			c_printf("[n]%s\n", " 単語確率を計算できません. token_ids.size() < _hpylm_depth");
 			return -1;
 		}
 		double sum_Pw_h = 0;
-		vector<id> context_token_ids(token_ids.begin(), token_ids.begin() + _max_depth);
-		for(int depth = _max_depth;depth < token_ids.size();depth++){
+		vector<id> context_token_ids(token_ids.begin(), token_ids.begin() + _hpylm_depth);
+		for(int depth = _hpylm_depth;depth < token_ids.size();depth++){
 			id token_id = token_ids[depth];
 			double prob = Pw_h(token_id, context_token_ids);
 			sum_Pw_h += log2(prob + 1e-10);
@@ -188,7 +186,7 @@ public:
 		return sum_Pw_h;
 	}
 	id sample_next_token(vector<id> &context_token_ids, id eos_id){
-		Node* node = find_node_by_tracing_back_context(context_token_ids, context_token_ids.size() - 1, false);
+		Node* node = find_node_by_tracing_back_context(context_token_ids, context_token_ids.size() - 1, _hpylm_depth, false);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " トークンを生成できません. ノードが見つかりません.");
@@ -275,7 +273,7 @@ public:
 			sum_1_y_ui_m[depth] += child->auxiliary_1_y_ui(d, theta);	// 1 - y_ui
 			sum_1_z_uwkj_m[depth] += child->auxiliary_1_z_uwkj(d);		// 1 - z_uwkj
 
-			sum_auxiliary_variables_recursively(child, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m, _bottom);
+			sum_auxiliary_variables_recursively(child, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m, bottom);
 		}
 	}
 	// dとθの推定
@@ -295,18 +293,17 @@ public:
 		sum_1_z_uwkj_m[0] = _root->auxiliary_1_z_uwkj(_d_m[0]);				// 1 - z_uwkj
 
 		// それ以外
-		_bottom = 0;
+		_max_depth = 0;
 		// _bottomは以下を実行すると更新される
-		sum_auxiliary_variables_recursively(_root, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m, _bottom);
-		init_hyperparameters_at_depth_if_needed(_bottom);
+		sum_auxiliary_variables_recursively(_root, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m, _max_depth);
+		init_hyperparameters_at_depth_if_needed(_max_depth);
 
-		for(int u = 0;u <= _bottom;u++){
+		for(int u = 0;u <= _max_depth;u++){
 			_d_m[u] = Sampler::beta(_a_m[u] + sum_1_y_ui_m[u], _b_m[u] + sum_1_z_uwkj_m[u]);
-			// 2番目の引数は逆数を渡すことに注意
-			_theta_m[u] = Sampler::gamma(_alpha_m[u] + sum_y_ui_m[u], 1 / (_beta_m[u] - sum_log_x_u_m[u]));
+			_theta_m[u] = Sampler::gamma(_alpha_m[u] + sum_y_ui_m[u], _beta_m[u] - sum_log_x_u_m[u]);
 		}
 		// 不要な深さのハイパーパラメータを削除
-		int num_remove = _d_m.size() - _bottom - 1;
+		int num_remove = _d_m.size() - _max_depth - 1;
 		for(int n = 0;n < num_remove;n++){
 			_d_m.pop_back();
 			_theta_m.pop_back();
@@ -317,19 +314,19 @@ public:
 		}
 	}
 	int get_max_depth(bool use_cache = true){
-		if(use_cache && _bottom != -1){
-			return _bottom;
+		if(use_cache && _max_depth != -1){
+			return _max_depth;
 		}
-		_bottom = 0;
+		_max_depth = 0;
 		update_max_depth_recursively(_root);
-		return _bottom;
+		return _max_depth;
 	}
 	void update_max_depth_recursively(Node* node){
 		for(auto elem: node->_children){
 			Node* child = elem.second;
 			int depth = child->_depth;
-			if(depth > _bottom){
-				_bottom = depth;
+			if(depth > _max_depth){
+				_max_depth = depth;
 			}
 			update_max_depth_recursively(child);
 		}
@@ -355,7 +352,7 @@ public:
 	void count_node_of_each_depth(unordered_map<id, int> &map){
 		_root->count_node_of_each_depth(map);
 	}
-	void save(string dir = "model/"){
+	bool save(string dir = "model/"){
 		string filename = dir + "hpylm.model";
 		std::ofstream ofs(filename);
 		boost::archive::binary_oarchive oarchive(ofs);
@@ -364,14 +361,17 @@ public:
 		// cout << "	num_customers: " << get_num_customers() << endl;
 		// cout << "	num_nodes: " << get_num_nodes() << endl;
 		// cout << "	max_depth: " << get_max_depth() << endl;
+		return true;
 	}
-	void load(string dir = "model/"){
+	bool load(string dir = "model/"){
 		string filename = dir + "hpylm.model";
 		std::ifstream ifs(filename);
-		if(ifs.good()){
-			boost::archive::binary_iarchive iarchive(ifs);
-			iarchive >> *this;
+		if(ifs.good() == false){
+			return false;
 		}
+		boost::archive::binary_iarchive iarchive(ifs);
+		iarchive >> *this;
+		return true;
 	}
 };
 

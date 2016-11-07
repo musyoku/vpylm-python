@@ -73,7 +73,7 @@ public:
 
 		vector<int> new_order;
 		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){
-			int n_t = vpylm->sample_order(word_ids, w_t_i);
+			int n_t = vpylm->sample_order_at_timestep(word_ids, w_t_i);
 			vpylm->add_customer_at_timestep(word_ids, w_t_i, n_t);
 			new_order.push_back(n_t);
 		}
@@ -85,8 +85,8 @@ public:
 		return vpylm->get_max_depth();
 	}
 
-	int get_num_child_nodes(){
-		return vpylm->get_num_child_nodes();
+	int get_num_nodes(){
+		return vpylm->get_num_nodes();
 	}
 
 	int get_num_customers(){
@@ -131,7 +131,7 @@ public:
 
 		vector<int> new_order;
 		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){
-			int n_t = vpylm->sample_order(word_ids, w_t_i);
+			int n_t = vpylm->sample_order_at_timestep(word_ids, w_t_i);
 			vpylm->add_customer_at_timestep(word_ids, w_t_i, n_t);
 			new_order.push_back(n_t);
 		}
@@ -163,7 +163,7 @@ BOOST_PYTHON_MODULE(vpylm){
 	.def("set_g0", &PyVPYLM::set_g0)
 	.def("perform_gibbs_sampling", &PyVPYLM::perform_gibbs_sampling)
 	.def("get_max_depth", &PyVPYLM::get_max_depth)
-	.def("get_num_child_nodes", &PyVPYLM::get_num_child_nodes)
+	.def("get_num_nodes", &PyVPYLM::get_num_nodes)
 	.def("get_num_customers", &PyVPYLM::get_num_customers)
 	.def("get_discount_parameters", &PyVPYLM::get_discount_parameters)
 	.def("get_strength_parameters", &PyVPYLM::get_strength_parameters)

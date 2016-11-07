@@ -191,11 +191,9 @@ public:
 		}
 		double t_u = _num_tables;
 		sum_props += (theta_u + d_u * t_u) * parent_Pw;
-
 		double normalizer = 1.0 / sum_props;
 		uniform_real_distribution<double> rand(0, 1);
 		double r = rand(Sampler::mt);
-
 		double sum_normalized_probs = 0.0;
 		for(int k = 0;k < num_customers_at_table.size();k++){
 			sum_normalized_probs += std::max(0.0, num_customers_at_table[k] - d_u) * normalizer;
@@ -204,7 +202,7 @@ public:
 				if(update_n){
 					increment_stop_count();
 				}
-				return false;
+				return true;
 			}
 		}
 		add_customer_to_new_table(token_id, parent_Pw, d_m, theta_m);
@@ -215,19 +213,15 @@ public:
 	}
 	bool remove_customer(id token_id, bool update_n = true){
 		if(_arrangement.find(token_id) == _arrangement.end()){
+			c_printf("[R]%s", "エラー");
+			c_printf("[n]%s\n", " 客を除去できません. _arrangement.find(token_id) == _arrangement.end()");
 			return false;
 		}
-
 		vector<int> &num_customers_at_table = _arrangement[token_id];
-		double sum_props = 0.0;
-		for(int k = 0;k < num_customers_at_table.size();k++){
-			sum_props += num_customers_at_table[k];
-		}
-		
+		double sum_props = std::accumulate(num_customers_at_table.begin(), num_customers_at_table.end(), 0);		
 		double normalizer = 1.0 / sum_props;
 		uniform_real_distribution<double> rand(0, 1);
 		double r = rand(Sampler::mt);
-
 		double sum_normalized_probs = 0.0;
 		for(int k = 0;k < num_customers_at_table.size();k++){
 			sum_normalized_probs += num_customers_at_table[k] * normalizer;
@@ -366,10 +360,7 @@ public:
 	int get_num_customers(){
 		int num = 0;
 		for(auto elem: _arrangement){
-			vector<int> &num_customers_at_table = elem.second;
-			for(int i = 0;i < num_customers_at_table.size();i++){
-				num += num_customers_at_table[i];
-			}
+			num += std::accumulate(elem.second.begin(), elem.second.end(), 0);
 		}
 		if(num != _num_customers){
 			c_printf("[R]%s", "エラー");
@@ -426,7 +417,7 @@ public:
 		if(_num_tables >= 2){
 			double sum_y_ui = 0;
 			for(int i = 1;i <= _num_tables - 1;i++){
-				double denominator = theta_u + d_u * (double)i;
+				double denominator = theta_u + d_u * i;
 				if(denominator == 0){
 					c_printf("[R]%s", "エラー");
 					c_printf("[n]%s\n", " 0除算. denominator == 0");
@@ -442,7 +433,7 @@ public:
 		if(_num_tables >= 2){
 			double sum_1_y_ui = 0;
 			for(int i = 1;i <= _num_tables - 1;i++){
-				double denominator = theta_u + d_u * (double)i;
+				double denominator = theta_u + d_u * i;
 				if(denominator == 0){
 					c_printf("[R]%s", "エラー");
 					c_printf("[n]%s\n", " 0除算. denominator == 0");
