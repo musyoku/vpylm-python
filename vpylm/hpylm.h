@@ -70,7 +70,7 @@ public:
 		}
 	}
 	int ngram(){
-		return _max_depth + 1;
+		return _hpylm_depth + 1;
 	}
 	void set_g0(double g0){
 		_g0 = g0;
@@ -359,8 +359,7 @@ public:
 	void count_node_of_each_depth(unordered_map<id, int> &map){
 		_root->count_node_of_each_depth(map);
 	}
-	bool save(string dir = "model/"){
-		string filename = dir + "hpylm.model";
+	bool save(string filename = "hpylm.model"){
 		std::ofstream ofs(filename);
 		boost::archive::binary_oarchive oarchive(ofs);
 		oarchive << static_cast<const HPYLM&>(*this);
@@ -370,8 +369,7 @@ public:
 		// cout << "	max_depth: " << get_max_depth() << endl;
 		return true;
 	}
-	bool load(string dir = "model/"){
-		string filename = dir + "hpylm.model";
+	bool load(string filename = "hpylm.model"){
 		std::ifstream ifs(filename);
 		if(ifs.good() == false){
 			return false;

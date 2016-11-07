@@ -41,7 +41,7 @@ vector<wstring> split(const wstring &s, char delim) {
 }
 
 // スペースで分割する
-Vocab* load_words_in_textfile(string &filename, vector<vector<id>> &dataset){
+Vocab* load_words_in_textfile(string &filename, vector<vector<id>> &dataset, int ngram){
 	wifstream ifs(filename.c_str());
 	wstring str;
 	if (ifs.fail()){
@@ -55,7 +55,10 @@ Vocab* load_words_in_textfile(string &filename, vector<vector<id>> &dataset){
 	id unk_id = vocab->add_string(L"<unk>");
 	while (getline(ifs, str) && !str.empty()){
 		vector<wstring> words = split(str, ' ');
-		vector<id> token_ids = {bos_id};
+		vector<id> token_ids;
+		for(int i = 0;i < ngram;i++){
+			token_ids.push_back(bos_id);
+		}
 		for(auto word: words){
 			if(word.size() == 0){
 				continue;
@@ -87,10 +90,49 @@ void show_progress(int step, int total){
 	cout.flush();
 }
 
-void train(Vocab* vocab, vector<vector<id>> &dataset){
-	string hpylm_filename = "hpylm.model";
-	string vocab_filename = "hpylm.vocab";
-	string trainer_filename = "hpylm.trainer";
+void generate_words(Vocab* vocab, vector<vector<id>> &dataset){
+	string hpylm_filename = "model/hpylm.model";
+	string vocab_filename = "model/hpylm.vocab";
+
+	HPYLM* hpylm = new HPYLM();
+	hpylm->load(hpylm_filename);
+	vocab->load(vocab_filename);
+
+	int num_sample = 50;
+	int max_length = 400;
+	id bos_id = vocab->string_to_token_id(L"<bos>");
+	id eos_id = vocab->string_to_token_id(L"<eos>");
+	vector<id> token_ids;
+	for(int s = 0;s < num_sample;s++){
+		token_ids.clear();
+		for(int i = 0;i < hpylm->ngram();i++){
+			token_ids.push_back(bos_id);
+		}
+		for(int i = 0;i < max_length;i++){
+			id token_id = hpylm->sample_next_token(token_ids, eos_id);
+			token_ids.push_back(token_id);
+			if(token_id == eos_id){
+				break;
+			}
+		}
+		for(auto token_id: token_ids){
+			if(token_id == bos_id){
+				continue;
+			}
+			if(token_id == eos_id){
+				continue;
+			}
+			wstring word = vocab->token_id_to_string(token_id);
+			wcout << word << " ";
+		}
+		cout << endl;
+	}
+}
+
+void train(Vocab* vocab, vector<vector<id>> &dataset, int ngram){
+	string hpylm_filename = "model/hpylm.model";
+	string vocab_filename = "model/hpylm.vocab";
+	string trainer_filename = "model/hpylm.trainer";
 
 	vector<int> rand_indices;
 	vector<bool> is_first_addition;
@@ -99,11 +141,11 @@ void train(Vocab* vocab, vector<vector<id>> &dataset){
 		is_first_addition.push_back(true);
 	}
 
-	int ngram = 3;
+	cout << ngram << "-gram HPYLMを初期化しています ..." << endl;
 	HPYLM* hpylm = new HPYLM(ngram);
 	int num_chars = vocab->num_tokens();
 	hpylm->set_g0(1.0 / num_chars);
-
+	cout << "g0 <- " << 1.0 / num_chars << endl;
 
 	hpylm->load(hpylm_filename);
 	vocab->load(vocab_filename);
@@ -113,7 +155,7 @@ void train(Vocab* vocab, vector<vector<id>> &dataset){
 		iarchive >> is_first_addition;
 	}
 
-	int max_epoch = 500;
+	int max_epoch = 100;
 	int num_data = dataset.size();
 
 	cout << "HPYLMを学習しています ..." << endl;
@@ -150,10 +192,13 @@ void train(Vocab* vocab, vector<vector<id>> &dataset){
 			ppl += log_p;
 		}
 		ppl = exp(-ppl / num_data);
-		printf("Epoch %d / %d - %.1f sentences / sec - %.3f ppl", epoch, max_epoch, (double)num_data / msec * 1000.0, ppl);
+		printf("Epoch %d / %d - %.1f sentences / sec - %.3f ppl\n", epoch, max_epoch, (double)num_data / msec * 1000.0, ppl);
 		if(epoch % 100 == 0){
 			hpylm->save(hpylm_filename);
 			vocab->save(vocab_filename);
+			std::ofstream ofs(trainer_filename);
+			boost::archive::binary_oarchive oarchive(ofs);
+			oarchive << is_first_addition;
 		}
 	}
 
@@ -164,41 +209,12 @@ void train(Vocab* vocab, vector<vector<id>> &dataset){
 	oarchive << is_first_addition;
 
 	// <!-- デバッグ用
-	// 客を全て削除した時に客数が本当に0になるかを確認する場合
+	//客を全て削除した時に客数が本当に0になるかを確認する場合
 	// for(int step = 0;step < num_data;step++){
 	// 	int data_index = rand_indices[step];
-
-	// 	wstring sentence = dataset[data_index];
-	// 	if(sentence.length() == 0){
-	// 		continue;
-	// 	}
-	// 	sentence_char_ids.clear();
-	// 	sentence_char_ids.push_back(vocab->bosId());
-	// 	for(int i = 0;i < sentence.length();i++){
-	// 		int id = vocab->char2id(sentence[i]);
-	// 		sentence_char_ids.push_back(id);
-	// 	}
-	// 	sentence_char_ids.push_back(vocab->eosId());
-
-	// 	if(prev_orders.find(data_index) != prev_orders.end()){
-	// 		vector<int> &prev_order = prev_orders[data_index];
-	// 		if(prev_order.size() != sentence_char_ids.size()){
-	// 			printf("\x1b[41;97m");
-	// 			printf("WARNING");
-	// 			printf("\x1b[49;39m");
-	// 			printf(" prev_order missmatch.\n");
-	// 		}else{
-	// 			for(int c_t_i = 0;c_t_i < sentence_char_ids.size();c_t_i++){
-	// 				int n_t = prev_order[c_t_i];
-	// 				bool success = hpylm->remove(sentence_char_ids, c_t_i, n_t);
-	// 				if(success == false){
-	// 					printf("\x1b[41;97m");
-	// 					printf("WARNING");
-	// 					printf("\x1b[49;39m");
-	// 					printf(" Failed to remove a customer from hPYLM.\n");
-	// 				}
-	// 			}
-	// 		}
+	// 	vector<id> token_ids = dataset[data_index];
+	// 	for(int token_t_index = ngram - 1;token_t_index < token_ids.size();token_t_index++){
+	// 		hpylm->remove_customer_at_timestep(token_ids, token_t_index);
 	// 	}
 	// }
 	//  -->
@@ -221,6 +237,7 @@ int main(int argc, char *argv[]){
 	wcin.imbue(ctype_default);
 
 	string text_filename;
+	int ngram = 3;
 	cout << "num args = " << argc << endl;
 	if(argc % 2 != 1){
 		c_printf("[R]%s", "エラー");
@@ -232,15 +249,24 @@ int main(int argc, char *argv[]){
 			if (string(argv[i]) == "-t" || string(argv[i]) == "--text") {
 				if(i + 1 >= argc){
 					c_printf("[R]%s", "エラー");
-					cout << "不正なコマンドライン引数です." << string(argv[i]) << endl;
+					cout << "不正なコマンドライン引数です. " << string(argv[i]) << endl;
 					exit(1);
 				}
 				text_filename = string(argv[i + 1]);
 			}
+			else if (string(argv[i]) == "-n" || string(argv[i]) == "--ngram") {
+				if(i + 1 >= argc){
+					c_printf("[R]%s", "エラー");
+					cout << "不正なコマンドライン引数です. " << string(argv[i]) << endl;
+					exit(1);
+				}
+				ngram = atoi(argv[i + 1]);
+			}
 		}
 	}
 	vector<vector<id>> dataset;
-	Vocab* vocab = load_words_in_textfile(text_filename, dataset);
-	train(vocab, dataset);
+	Vocab* vocab = load_words_in_textfile(text_filename, dataset, ngram);
+	// train(vocab, dataset, ngram);
+	generate_words(vocab, dataset);
 	return 0;
 }
