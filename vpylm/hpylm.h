@@ -51,7 +51,8 @@ public:
 
 	HPYLM(int ngram = 2){
 		// 深さは0から始まることに注意
-		// バイグラムなら最大深さは1
+		// 2-gramなら最大深さは1. root(0) -> 2-gram(1)
+		// 3-gramなら最大深さは2. root(0) -> 2-gram(1) -> 3-gram(2)
 		_hpylm_depth = ngram - 1;
 		_max_depth = -1;
 
@@ -80,7 +81,7 @@ public:
 		}
 		id token_t = token_ids[token_t_index];
 		node->add_customer(token_t, _g0, _d_m, _theta_m);
-		return false;
+		return true;
 	}
 	bool remove_customer_at_timestep(vector<id> &token_ids, int token_t_index){
 		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, _hpylm_depth, false);
@@ -97,6 +98,10 @@ public:
 		}
 		return true;
 	}
+	// token列の位置tからorderだけ遡る
+	// token_ids:        [0, 1, 2, 3, 4, 5]
+	// token_t_index:4          ^     ^
+	// order_t: 2               |<- <-|
 	Node* find_node_by_tracing_back_context(vector<id> &token_ids, int token_t_index, int order_t, bool generate_node_if_needed = false){
 		if(token_t_index - order_t < 0){
 			return NULL;
@@ -127,7 +132,7 @@ public:
 			c_printf("[n]%s\n", " 単語確率を計算できません. context_token_ids.size() < _hpylm_depth");
 			return -1;
 		}
-		Node* node = find_node_by_tracing_back_context(context_token_ids, token_id, _hpylm_depth, false);
+		Node* node = find_node_by_tracing_back_context(context_token_ids, context_token_ids.size(), _hpylm_depth, false);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " 単語確率を計算できません. node == NULL");
@@ -164,6 +169,9 @@ public:
 		for(int depth = _hpylm_depth;depth < token_ids.size();depth++){
 			id token_id = token_ids[depth];
 			double prob = Pw_h(token_id, context_token_ids);
+			if(prob == -1){
+				return -1;
+			}
 			sum_Pw_h += log(prob + 1e-10);
 			context_token_ids.push_back(token_id);
 		}
@@ -180,13 +188,16 @@ public:
 		for(int depth = _hpylm_depth;depth < token_ids.size();depth++){
 			id token_id = token_ids[depth];
 			double prob = Pw_h(token_id, context_token_ids);
+			if(prob == -1){
+				return -1;
+			}
 			sum_Pw_h += log2(prob + 1e-10);
 			context_token_ids.push_back(token_id);
 		}
 		return sum_Pw_h;
 	}
 	id sample_next_token(vector<id> &context_token_ids, id eos_id){
-		Node* node = find_node_by_tracing_back_context(context_token_ids, context_token_ids.size() - 1, _hpylm_depth, false);
+		Node* node = find_node_by_tracing_back_context(context_token_ids, context_token_ids.size(), _hpylm_depth, false);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " トークンを生成できません. ノードが見つかりません.");

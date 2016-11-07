@@ -48,7 +48,11 @@ private:
 		_num_tables++;
 		_num_customers++;
 		if(_parent != NULL){
-			_parent->add_customer(token_id, parent_Pw, d_m, theta_m, false);
+			bool success = _parent->add_customer(token_id, parent_Pw, d_m, theta_m, false);
+			if(success == false){
+				c_printf("[R]%s", "エラー");
+				c_printf("[n]%s\n", " 客を追加できません. success == false");
+			}
 		}
 		return true;
 	}
@@ -73,7 +77,11 @@ private:
 		}
 		if(num_customers_at_table[table_k] == 0){
 			if(_parent != NULL){
-				_parent->remove_customer(token_id, false);
+				bool success = _parent->remove_customer(token_id, false);
+				if(success == false){
+					c_printf("[R]%s", "エラー");
+					c_printf("[n]%s\n", " 客を除去できません. success == false");
+				}
 			}
 			num_customers_at_table.erase(num_customers_at_table.begin() + table_k);
 			_num_tables--;

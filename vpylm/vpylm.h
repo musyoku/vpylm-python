@@ -136,15 +136,15 @@ public:
 		}
 		return probs.size() - 1;
 	}
-	double Pw_h(vector<id> &word_ids, vector<id> context_ids, bool fixed_depth = false){
+	double Pw_h(vector<id> &word_ids, vector<id> context_ids){
 		double p = 1;
 		for(int n = 0;n < word_ids.size();n++){
-			p *= Pw_h(word_ids[n], context_ids, fixed_depth);
+			p *= Pw_h(word_ids[n], context_ids);
 			context_ids.push_back(word_ids[n]);
 		}
 		return p;
 	}
-	double Pw_h(id word_id, vector<id> &context_ids, bool fixed_depth = false){
+	double Pw_h(id word_id, vector<id> &context_ids){
 		Node* node = _root;
 		int depth = 0;
 		for(;depth < context_ids.size();depth++){
@@ -157,9 +157,6 @@ public:
 				break;
 			}
 			node = child;
-		}
-		if(fixed_depth && depth != context_ids.size()){
-			return 0;
 		}
 		double p = 0;
 		for(int n = 0;n <= depth;n++){
@@ -246,21 +243,27 @@ public:
 		}
 		return p;
 	}
-	double log_Pw(vector<id> &word_ids){
-		if(word_ids.size() == 0){
-			return 0;
+	double log_Pw(vector<id> &token_ids){
+		double sum_Pw_h = 0;
+		vector<id> context_token_ids(token_ids.begin(), token_ids.begin());
+		for(int depth = 1;depth < token_ids.size();depth++){
+			id token_id = token_ids[depth];
+			double prob = Pw_h(token_id, context_token_ids);
+			sum_Pw_h += log(prob + 1e-10);
+			context_token_ids.push_back(token_id);
 		}
-		id w_0 = word_ids[0];
-		double p0 = _root->Pw(w_0, _g0, _d_m, _theta_m) * _root->stop_probability(_beta_stop, _beta_pass);
-		double p = log2(p0 + 1e-10);
-		vector<id> context_ids(word_ids.begin(), word_ids.begin() + 1);
-		for(int depth = 1;depth < word_ids.size();depth++){
-			id word = word_ids[depth];
-			double _p = Pw_h(word, context_ids);
-			p += log2(_p + 1e-10);
-			context_ids.push_back(word_ids[depth]);
+		return sum_Pw_h;
+	}
+	double log2_Pw(vector<id> &token_ids){
+		double sum_Pw_h = 0;
+		vector<id> context_token_ids(token_ids.begin(), token_ids.begin());
+		for(int depth = 1;depth < token_ids.size();depth++){
+			id token_id = token_ids[depth];
+			double prob = Pw_h(token_id, context_token_ids);
+			sum_Pw_h += log2(prob + 1e-10);
+			context_token_ids.push_back(token_id);
 		}
-		return p;
+		return sum_Pw_h;
 	}
 	id sample_next_token(vector<id> &context_ids){
 		int token_t_index = context_ids.size() - 1;
