@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import math, sys, time, pickle, os
-import vpylm
+import hpylm
 import dataset
 
 # データの読み込み
-split_by = "char"
-line_list, n_vocab, n_data = dataset.load("beluga", split_by=split_by, include_whitespace=False)
+split_by = "word"
+line_list, n_vocab, n_data = dataset.load("alice", split_by=split_by, include_whitespace=False)
 
-model = vpylm.vpylm()
+ngram = 3
+model = hpylm.hpylm(ngram)
 file_exists = model.load()
 if file_exists:
 	print "{} depth - {} nodes - {} customers".format(model.get_max_depth(), model.get_num_child_nodes(), model.get_num_customers())
-
 
 # 文章生成
 def generate_words():
@@ -30,35 +30,12 @@ def generate_words():
 		str += word + (" " if split_by == "word" else "")
 	print str
 
-# 単語が生成されたn-gramオーダーをサンプリングして表示する
-def visualize_orders():
-	indices = np.arange(n_data)
-	np.random.shuffle(indices)
-	for i in xrange(50):
-		index = indices[i]
-		line = line_list[index]
-		orders = model.sample_orders(line)
-		sentence_str = ""
-		order_str = ""
-		for i, id in enumerate(line[1:-1]):
-			word = dataset.id_to_word(id)
-			if split_by == "word":
-				sentence_str += word + " "
-				order_str += " " * (len(word) // 2) + str(orders[i + 1]) + " " * (len(word) - len(word) // 2)
-			elif split_by == "char" or split_by == "character":
-				sentence_str += word
-				order_str += str(orders[i + 1])
-		print sentence_str
-		print order_str
-		print "\n"
-
 # n-gramオーダーのデータでの分布を可視化
 def visualize_ngram_occurrences():
 	counts = model.get_node_count_for_each_depth()
 	max_count = max(counts)
 	for n, count in enumerate(counts):
 		print n, "#" * int(math.ceil(count / float(max_count) * 30)), count
-
 
 # VPYLMの学習
 def train():
@@ -82,7 +59,6 @@ def train():
 	indices = np.arange(n_data)
 
 	for epoch in xrange(1, max_epoch + 1):
-
 		print "Epoch {}/{}".format(epoch, max_epoch)
 		np.random.shuffle(indices)
 		start_time = time.time()
@@ -90,8 +66,9 @@ def train():
 			index = indices[train_step]
 			line = line_list[index]
 			prev_order = prev_order_list[index]
-			new_order = model.perform_gibbs_sampling(line, prev_order)
-			prev_order_list[index] = new_order[:]
+			print prev_order
+			new_order = model.perform_gibbs_sampling(line, False if prev_order == -1 else True)
+			prev_order_list[index] = ngram
 
 			if train_step % (n_data // 200) == 0 or train_step == n_data - 1:
 				show_progress(train_step, n_data)
@@ -143,8 +120,6 @@ def main():
 
 	for n in xrange(100):
 		generate_words()
-
-	# visualize_orders()
 
 	visualize_ngram_occurrences()
 

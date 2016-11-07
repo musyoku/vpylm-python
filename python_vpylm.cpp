@@ -34,7 +34,7 @@ public:
 	// 基底分布 i.e. 単語（文字）0-gram確率
 	// 1 / 単語数（文字数）でよい
 	void set_g0(double g0){
-		this->vpylm->_g0 = g0;
+		vpylm->_g0 = g0;
 		c_printf("[n]%s%f\n", " G0 <- ", g0);
 	}
 

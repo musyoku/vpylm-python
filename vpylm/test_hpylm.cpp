@@ -79,11 +79,6 @@ void test_train(){
 		random_shuffle(rand_indices.begin(), rand_indices.end());
 		for(int t = 0;t < rand_indices.size();t++){
 			int token_t_index = rand_indices[t];
-			if(t == 4997 && token_t_index == 3458){
-				t = t * 1;
-			}
-			// cout << t << " ";
-			// cout << token_t_index << endl;
 			int prev_order_t = prev_orders[token_t_index];
 			if(prev_order_t != -1){
 				bool success = hpylm->remove_customer_at_timestep(token_ids, token_t_index);

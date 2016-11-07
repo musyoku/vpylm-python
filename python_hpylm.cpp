@@ -26,151 +26,98 @@ private:
 	HPYLM* hpylm;
 
 public:
-	PyHPYLM(int ngram = 2){
+	PyHPYLM(int ngram){
 		hpylm = new HPYLM(ngram);
-		c_printf("[n]%d-gram %s", ngram, " HPYLMを初期化しています ...\n");
+		c_printf("[n]%d-gram %s", ngram, "HPYLMを初期化しています ...\n");
 	}
-
 	// 基底分布 i.e. 単語（文字）0-gram確率
 	// 1 / 単語数（文字数）でよい
 	void set_g0(double g0){
-		this->hpylm->_g0 = g0;
-		c_printf("[n]%s%f\n", " G0 <- ", g0);
+		hpylm->_g0 = g0;
+		c_printf("[n]%s%f\n", "G0 <- ", g0);
 	}
-
 	bool save(){
-		c_printf("[n]%s", " HPYLMを保存しています ...\n");
+		c_printf("[n]%s", "HPYLMを保存しています ...\n");
 		return hpylm->save();
 	}
-
 	bool load(){
-		c_printf("[n]%s", " HPYLMを読み込んでいます ...\n");
+		c_printf("[n]%s", "HPYLMを読み込んでいます ...\n");
 		return hpylm->load();
 	}
-
-	python::list perform_gibbs_sampling(python::list &sentence, python::list &prev_orders){
-		std::vector<id> word_ids;
+	void perform_gibbs_sampling(python::list &sentence, bool first_addition = false){
+		std::vector<id> token_ids;
 		int len = python::len(sentence);
 		for(int i = 0;i < len;i++) {
-			word_ids.push_back(python::extract<id>(sentence[i]));
+			token_ids.push_back(python::extract<id>(sentence[i]));
 		}
-
-		if(python::len(prev_orders) != word_ids.size()){
-			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " prev_ordersとword_idsの長さが違います\n");
-		}
-
-		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){
-			int n_t = python::extract<int>(prev_orders[w_t_i]);
-			if(n_t != -1){
-				bool success = hpylm->remove(word_ids, w_t_i, n_t);
-				if(success == false){
-					c_printf("[R]%s", "エラー");
-					c_printf("[n]%s", " 客を除去できませんでした\n");
-				}
+		for(int token_t_index = hpylm->ngram() - 1;token_t_index < token_ids.size();token_t_index++){
+			if(first_addition == false){
+				hpylm->remove_customer_at_timestep(token_ids, token_t_index);
 			}
-		}				
-
-		vector<int> new_order;
-		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){
-			int n_t = hpylm->sampleOrder(word_ids, w_t_i);
-			hpylm->add(word_ids, w_t_i, n_t);
-			new_order.push_back(n_t);
+			hpylm->add_customer_at_timestep(token_ids, token_t_index);
 		}
-
-		return list_from_vector(new_order);
 	}
-
 	int get_max_depth(){
-		return hpylm->maxDepth();
+		return hpylm->get_max_depth();
 	}
-
-	int get_num_child_nodes(){
-		return hpylm->numChildNodes();
+	int get_num_nodes(){
+		return hpylm->get_num_nodes();
 	}
-
 	int get_num_customers(){
-		return hpylm->numCustomers();
+		return hpylm->get_num_customers();
 	}
-
 	python::list get_node_count_for_each_depth(){
 		unordered_map<id, int> map;
-		hpylm->countNodeForEachDepth(map);
-
+		hpylm->count_node_of_each_depth(map);
 		std::vector<int> counts;
 		std::map<int, int> ordered(map.begin(), map.end());
 		
 		// 0-gram
 		counts.push_back(0);
-
 		for(auto it = ordered.begin(); it != ordered.end(); ++it){
 			counts.push_back(it->second);
 		}
-
 		return list_from_vector(counts);
 	}
-
 	python::list get_discount_parameters(){
 		return list_from_vector(hpylm->_d_m);
 	}
-
 	python::list get_strength_parameters(){
 		return list_from_vector(hpylm->_theta_m);
 	}
-
 	void sample_hyperparameters(){
-		hpylm->sampleHyperParams();
+		hpylm->sample_hyperparams();
 	}
-
-	python::list sample_orders(python::list &sentence){
-		std::vector<id> word_ids;
-		int len = python::len(sentence);
-		for(int i = 0;i < len;i++) {
-			word_ids.push_back(python::extract<id>(sentence[i]));
-		}
-
-		vector<int> new_order;
-		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){
-			int n_t = hpylm->sampleOrder(word_ids, w_t_i);
-			hpylm->add(word_ids, w_t_i, n_t);
-			new_order.push_back(n_t);
-		}
-
-		return list_from_vector(new_order);
-	}
-
-	id sample_next_word(python::list &sentence){
-		std::vector<id> word_ids;
+	id sample_next_token(python::list &sentence, id eos_id){
+		std::vector<id> token_ids;
 		int len = python::len(sentence);
 		for(int i = 0; i<len; i++) {
-			word_ids.push_back(python::extract<id>(sentence[i]));
+			token_ids.push_back(python::extract<id>(sentence[i]));
 		}
-		return hpylm->sampleNextWord(word_ids);
+		return hpylm->sample_next_token(token_ids, eos_id);
 	}
-
 	double log_Pw(python::list &sentence){
-		std::vector<id> word_ids;
+		std::vector<id> token_ids;
 		int len = python::len(sentence);
 		for(int i = 0; i<len; i++) {
-			word_ids.push_back(python::extract<id>(sentence[i]));
+			token_ids.push_back(python::extract<id>(sentence[i]));
 		}
-		return hpylm->log_Pw(word_ids);
+		return hpylm->log_Pw(token_ids);
 	}
 };
 
 BOOST_PYTHON_MODULE(hpylm){
-	python::class_<PyHPYLM>("hpylm")
+	python::class_<PyHPYLM>("hpylm", python::init<int>())
 	.def("set_g0", &PyHPYLM::set_g0)
 	.def("perform_gibbs_sampling", &PyHPYLM::perform_gibbs_sampling)
 	.def("get_max_depth", &PyHPYLM::get_max_depth)
-	.def("get_num_child_nodes", &PyHPYLM::get_num_child_nodes)
+	.def("get_num_nodes", &PyHPYLM::get_num_nodes)
 	.def("get_num_customers", &PyHPYLM::get_num_customers)
 	.def("get_discount_parameters", &PyHPYLM::get_discount_parameters)
 	.def("get_strength_parameters", &PyHPYLM::get_strength_parameters)
 	.def("sample_hyperparameters", &PyHPYLM::sample_hyperparameters)
 	.def("log_Pw", &PyHPYLM::log_Pw)
-	.def("sample_next_word", &PyHPYLM::sample_next_word)
-	.def("sample_orders", &PyHPYLM::sample_orders)
+	.def("sample_next_token", &PyHPYLM::sample_next_token)
 	.def("get_node_count_for_each_depth", &PyHPYLM::get_node_count_for_each_depth)
 	.def("save", &PyHPYLM::save)
 	.def("load", &PyHPYLM::load);

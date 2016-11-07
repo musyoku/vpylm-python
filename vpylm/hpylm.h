@@ -3,6 +3,7 @@
 #include <vector>
 #include <random>
 #include <unordered_map> 
+#include <cstdlib>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/base_object.hpp>
 #include <boost/archive/binary_iarchive.hpp>
@@ -68,6 +69,9 @@ public:
 			_beta_m.push_back(PYLM_INITIAL_BETA);
 		}
 	}
+	int ngram(){
+		return _max_depth + 1;
+	}
 	void set_g0(double g0){
 		_g0 = g0;
 	}
@@ -77,7 +81,7 @@ public:
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " 客を追加できません. ノードが見つかりません.");
-			return false;
+			exit(1);
 		}
 		id token_t = token_ids[token_t_index];
 		node->add_customer(token_t, _g0, _d_m, _theta_m);
@@ -88,7 +92,7 @@ public:
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " 客を除去できません. ノードが見つかりません.");
-			return false;
+			exit(1);
 		}
 		id token_t = token_ids[token_t_index];
 		node->remove_customer(token_t);
@@ -130,13 +134,13 @@ public:
 		if(context_token_ids.size() < _hpylm_depth){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " 単語確率を計算できません. context_token_ids.size() < _hpylm_depth");
-			return -1;
+			exit(1);
 		}
 		Node* node = find_node_by_tracing_back_context(context_token_ids, context_token_ids.size(), _hpylm_depth, false);
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " 単語確率を計算できません. node == NULL");
-			return -1;
+			exit(1);
 		}
 		return node->Pw(token_id, _g0, _d_m, _theta_m);
 	}
@@ -147,7 +151,7 @@ public:
 		if(token_ids.size() < _hpylm_depth + 1){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " 単語確率を計算できません. token_ids.size() < _hpylm_depth");
-			return -1;
+			exit(1);
 		}
 		double mul_Pw_h = 1;
 		vector<id> context_token_ids(token_ids.begin(), token_ids.begin() + _hpylm_depth);
@@ -162,17 +166,13 @@ public:
 		if(token_ids.size() < _hpylm_depth + 1){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " 単語確率を計算できません. token_ids.size() < _hpylm_depth");
-			return -1;
+			exit(1);
 		}
 		double sum_Pw_h = 0;
 		vector<id> context_token_ids(token_ids.begin(), token_ids.begin() + _hpylm_depth);
 		for(int depth = _hpylm_depth;depth < token_ids.size();depth++){
 			id token_id = token_ids[depth];
-			double prob = Pw_h(token_id, context_token_ids);
-			if(prob == -1){
-				return -1;
-			}
-			sum_Pw_h += log(prob + 1e-10);
+			sum_Pw_h += log(Pw_h(token_id, context_token_ids) + 1e-10);
 			context_token_ids.push_back(token_id);
 		}
 		return sum_Pw_h;
@@ -181,17 +181,13 @@ public:
 		if(token_ids.size() < _hpylm_depth + 1){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " 単語確率を計算できません. token_ids.size() < _hpylm_depth");
-			return -1;
+			exit(1);
 		}
 		double sum_Pw_h = 0;
 		vector<id> context_token_ids(token_ids.begin(), token_ids.begin() + _hpylm_depth);
 		for(int depth = _hpylm_depth;depth < token_ids.size();depth++){
 			id token_id = token_ids[depth];
-			double prob = Pw_h(token_id, context_token_ids);
-			if(prob == -1){
-				return -1;
-			}
-			sum_Pw_h += log2(prob + 1e-10);
+			sum_Pw_h += log2(Pw_h(token_id, context_token_ids) + 1e-10);
 			context_token_ids.push_back(token_id);
 		}
 		return sum_Pw_h;
@@ -201,7 +197,7 @@ public:
 		if(node == NULL){
 			c_printf("[R]%s", "エラー");
 			c_printf("[n]%s\n", " トークンを生成できません. ノードが見つかりません.");
-			return eos_id;
+			exit(1);
 		}
 		vector<id> token_ids;
 		vector<double> probs;
