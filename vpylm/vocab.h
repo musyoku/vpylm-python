@@ -84,19 +84,19 @@ public:
 		std::ofstream ofs(filename);
 		boost::archive::binary_oarchive oarchive(ofs);
 		oarchive << static_cast<const Vocab&>(*this);
-		cout << "saved to " << filename << endl;
-		cout << "	num_tokens: " << num_tokens() << endl;
-		cout << "	num_reusable_ids: " << _reusable_token_ids.size() << endl;
+		// cout << "saved to " << filename << endl;
+		// cout << "	num_tokens: " << num_tokens() << endl;
+		// cout << "	num_reusable_ids: " << _reusable_token_ids.size() << endl;
 	}
 
 	void load(string filename = "vocab.dump"){
 		std::ifstream ifs(filename);
 		if(ifs.good()){
-			cout << "loading " << filename << endl;
+			// cout << "loading " << filename << endl;
 			boost::archive::binary_iarchive iarchive(ifs);
 			iarchive >> *this;
-			cout << "	num_tokens: " << num_tokens() << endl;
-			cout << "	num_reusable_ids: " << _reusable_token_ids.size() << endl;
+			// cout << "	num_tokens: " << num_tokens() << endl;
+			// cout << "	num_reusable_ids: " << _reusable_token_ids.size() << endl;
 		}
 	}
 	void dump(){

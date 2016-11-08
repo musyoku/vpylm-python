@@ -56,6 +56,7 @@ Vocab* load_words_in_textfile(string &filename, vector<vector<id>> &dataset, int
 	while (getline(ifs, str) && !str.empty()){
 		vector<wstring> words = split(str, ' ');
 		vector<id> token_ids;
+		// HPYLMでは深さが固定なので先頭にダミーを挿入する
 		for(int i = 0;i < ngram;i++){
 			token_ids.push_back(bos_id);
 		}
@@ -64,6 +65,41 @@ Vocab* load_words_in_textfile(string &filename, vector<vector<id>> &dataset, int
 				continue;
 			}
 			id token_id = vocab->add_string(word);
+			token_ids.push_back(token_id);
+		}
+		token_ids.push_back(eos_id);
+		if(token_ids.size() > 0){
+			dataset.push_back(token_ids);
+		}
+	}
+	cout << filename << "を読み込みました（" << dataset.size() << "行）" << endl;
+	return vocab;
+}
+
+// 文字n-gramの学習
+Vocab* load_characters_in_textfile(string &filename, vector<vector<id>> &dataset, int ngram){
+	wifstream ifs(filename.c_str());
+	wstring str;
+	if (ifs.fail()){
+		c_printf("[R]%s", "エラー");
+		c_printf("[n] %s%s\n", filename.c_str(), "を開けません.");
+		return NULL;
+	}
+	Vocab* vocab = new Vocab();
+	id bos_id = vocab->add_string(L"<bos>");
+	id eos_id = vocab->add_string(L"<eos>");
+	id unk_id = vocab->add_string(L"<unk>");
+	while (getline(ifs, str) && !str.empty()){
+		vector<id> token_ids;
+		// HPYLMでは深さが固定なので先頭にダミーを挿入する
+		for(int i = 0;i < ngram;i++){
+			token_ids.push_back(bos_id);
+		}
+		if(str.size() == 0){
+			continue;
+		}
+		for(int i = 0;i < str.size();i++){
+			id token_id = vocab->add_string(wstring(str.begin() + i, str.begin() + i + 1));
 			token_ids.push_back(token_id);
 		}
 		token_ids.push_back(eos_id);
@@ -90,7 +126,7 @@ void show_progress(int step, int total){
 	cout.flush();
 }
 
-void generate_words(Vocab* vocab, vector<vector<id>> &dataset){
+void generate_words(Vocab* vocab, vector<vector<id>> &dataset, wstring spacer){
 	string hpylm_filename = "model/hpylm.model";
 	string vocab_filename = "model/hpylm.vocab";
 
@@ -123,7 +159,7 @@ void generate_words(Vocab* vocab, vector<vector<id>> &dataset){
 				continue;
 			}
 			wstring word = vocab->token_id_to_string(token_id);
-			wcout << word << " ";
+			wcout << word << spacer;
 		}
 		cout << endl;
 	}
@@ -160,7 +196,7 @@ void train(Vocab* vocab, vector<vector<id>> &dataset, int ngram){
 
 	cout << "HPYLMを学習しています ..." << endl;
 	for(int epoch = 1;epoch <= max_epoch;epoch++){
-		printf("Epoch %d / %d", epoch, max_epoch);
+		// printf("Epoch %d / %d", epoch, max_epoch);
 		auto start_time = chrono::system_clock::now();
 		random_shuffle(rand_indices.begin(), rand_indices.end());
 
@@ -192,8 +228,8 @@ void train(Vocab* vocab, vector<vector<id>> &dataset, int ngram){
 			ppl += log_p;
 		}
 		ppl = exp(-ppl / num_data);
-		printf("Epoch %d / %d - %.1f / s - %.3f ppl\n", epoch, max_epoch, (double)num_data / msec * 1000.0, ppl);
-		if(epoch % 100 == 0){
+		printf("Epoch %d / %d - %.1f fps - %.3f ppl\n", epoch, max_epoch, (double)num_data / msec * 1000.0, ppl);
+		if(epoch % 10 == 0){
 			hpylm->save(hpylm_filename);
 			vocab->save(vocab_filename);
 			std::ofstream ofs(trainer_filename);
@@ -265,8 +301,8 @@ int main(int argc, char *argv[]){
 		}
 	}
 	vector<vector<id>> dataset;
-	Vocab* vocab = load_words_in_textfile(text_filename, dataset, ngram);
-	train(vocab, dataset, ngram);
-	// generate_words(vocab, dataset);
+	Vocab* vocab = load_characters_in_textfile(text_filename, dataset, ngram);
+	// train(vocab, dataset, ngram);
+	generate_words(vocab, dataset, L"");
 	return 0;
 }
