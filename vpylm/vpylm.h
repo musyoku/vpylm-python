@@ -265,7 +265,7 @@ public:
 		}
 		return sum_Pw_h;
 	}
-	id sample_next_token(vector<id> &context_ids){
+	id sample_next_token(vector<id> &context_ids, id eos_id){
 		int token_t_index = context_ids.size() - 1;
 		Node* node = _root;
 		vector<double> probs;
@@ -289,7 +289,7 @@ public:
 			}
 		}
 		if(sum == 0){
-			return 0;
+			return eos_id;
 		}
 		double ratio = 1.0 / sum;
 		uniform_real_distribution<double> rand(0, 1);
@@ -317,10 +317,10 @@ public:
 			}
 		}
 		if(word_ids.size() == 0){
-			return 0;
+			return eos_id;
 		}
 		if(sum == 0){
-			return 0;
+			return eos_id;
 		}
 		ratio = 1.0 / sum;
 		r = Sampler::uniform(0, 1);
