@@ -22,16 +22,16 @@
 
 using namespace std;
 
-vector<wstring> split(const wstring &s, char delim) {
+vector<wstring> split(const wstring &s, char delim){
     vector<wstring> elems;
     wstring item;
-    for (char ch: s) {
-        if (ch == delim) {
+    for(char ch: s){
+        if (ch == delim){
             if (!item.empty())
                 elems.push_back(item);
             item.clear();
         }
-        else {
+        else{
             item += ch;
         }
     }
@@ -81,7 +81,7 @@ void show_progress(int step, int total){
 
 	cout << "[";
 	int pos = barWidth * progress;
-	for (int i = 0; i < barWidth; ++i) {
+	for(int i = 0; i < barWidth; ++i){
 		if (i < pos) cout << "=";
 		else if (i == pos) cout << ">";
 		else cout << " ";
@@ -192,7 +192,7 @@ void train(Vocab* vocab, vector<vector<id>> &dataset, int ngram){
 			ppl += log_p;
 		}
 		ppl = exp(-ppl / num_data);
-		printf("Epoch %d / %d - %.1f sentences / sec - %.3f ppl\n", epoch, max_epoch, (double)num_data / msec * 1000.0, ppl);
+		printf("Epoch %d / %d - %.1f / s - %.3f ppl\n", epoch, max_epoch, (double)num_data / msec * 1000.0, ppl);
 		if(epoch % 100 == 0){
 			hpylm->save(hpylm_filename);
 			vocab->save(vocab_filename);
@@ -244,9 +244,9 @@ int main(int argc, char *argv[]){
 		c_printf("[n] %s\n", "テキストファイルを指定してください. -t example.txt");
 		exit(1);
 	}else{
-		for (int i = 0; i < argc; i++) {
+		for(int i = 0; i < argc; i++){
 			cout << i << "-th args = " << argv[i] << endl; 
-			if (string(argv[i]) == "-t" || string(argv[i]) == "--text") {
+			if (string(argv[i]) == "-t" || string(argv[i]) == "--text"){
 				if(i + 1 >= argc){
 					c_printf("[R]%s", "エラー");
 					cout << "不正なコマンドライン引数です. " << string(argv[i]) << endl;
@@ -254,7 +254,7 @@ int main(int argc, char *argv[]){
 				}
 				text_filename = string(argv[i + 1]);
 			}
-			else if (string(argv[i]) == "-n" || string(argv[i]) == "--ngram") {
+			else if (string(argv[i]) == "-n" || string(argv[i]) == "--ngram"){
 				if(i + 1 >= argc){
 					c_printf("[R]%s", "エラー");
 					cout << "不正なコマンドライン引数です. " << string(argv[i]) << endl;
@@ -266,7 +266,7 @@ int main(int argc, char *argv[]){
 	}
 	vector<vector<id>> dataset;
 	Vocab* vocab = load_words_in_textfile(text_filename, dataset, ngram);
-	// train(vocab, dataset, ngram);
-	generate_words(vocab, dataset);
+	train(vocab, dataset, ngram);
+	// generate_words(vocab, dataset);
 	return 0;
 }

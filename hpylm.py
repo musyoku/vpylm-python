@@ -40,16 +40,16 @@ def visualize_ngram_occurrences():
 # VPYLMの学習
 def train():
 	# 前回推定したn-gramオーダー
-	if os.path.exists("prev_orders.dump"):
-		with open("prev_orders.dump", "rb") as f:
-			prev_order_list = pickle.load(f)
+	if os.path.exists("trainer.dump"):
+		with open("trainer.dump", "rb") as f:
+			is_first_addition = pickle.load(f)
 	else:
-		prev_order_list = []
+		is_first_addition = []
 		for i, line in enumerate(line_list):
 			prev_order = []
 			for j in xrange(len(line)):
 				prev_order.append(-1)
-			prev_order_list.append(prev_order)
+			is_first_addition.append(True)
 
 	model.set_g0(1.0 / n_vocab)
 
@@ -59,15 +59,14 @@ def train():
 	indices = np.arange(n_data)
 
 	for epoch in xrange(1, max_epoch + 1):
-		print "Epoch {}/{}".format(epoch, max_epoch)
+		print "Epoch {} / {}".format(epoch, max_epoch)
 		np.random.shuffle(indices)
 		start_time = time.time()
 		for train_step in xrange(n_data):
 			index = indices[train_step]
 			line = line_list[index]
-			prev_order = prev_order_list[index]
-			new_order = model.perform_gibbs_sampling(line, False if prev_order == -1 else True)
-			prev_order_list[index] = ngram
+			new_order = model.perform_gibbs_sampling(line, is_first_addition[index])
+			is_first_addition[index] = False
 
 			if train_step % (n_data // 200) == 0 or train_step == n_data - 1:
 				show_progress(train_step, n_data)
@@ -79,26 +78,26 @@ def train():
 			sum_log_Pw = 0
 			for index in xrange(n_data):
 				line = line_list[index]
-				sum_log_Pw += model.compute_log_Pw(line) / len(line)
+				sum_log_Pw += model.log_Pw(line) / len(line)
 			vpylm_ppl = math.exp(-sum_log_Pw / n_data);
 
 			lines_per_sec = n_data / float(time.time() - start_time)
-			print "{:.2f} lines / sec - {:.2f} ppl - {} depth - {} nodes - {} customers".format(lines_per_sec, vpylm_ppl, model.get_max_depth(), model.get_num_child_nodes(), model.get_num_customers())
+			print "{:.2f} lines / sec - {:.2f} ppl - {} depth - {} nodes - {} customers".format(lines_per_sec, vpylm_ppl, model.get_max_depth(), model.get_num_nodes(), model.get_num_customers())
 		# print model.get_discount_parameters()
 		# print model.get_strength_parameters()
 
 		if epoch % 100 == 0:
 			model.save()
-			with open("prev_orders.dump", "wb") as f:
-				pickle.dump(prev_order_list, f)
+			with open("trainer.dump", "wb") as f:
+				pickle.dump(is_first_addition, f)
 
 	model.save()
-	with open("prev_orders.dump", "wb") as f:
-		pickle.dump(prev_order_list, f)
+	with open("trainer.dump", "wb") as f:
+		pickle.dump(is_first_addition, f)
 
 def show_progress(step, total):
 	progress = step / float(total - 1)
-	barWidth = 70;
+	barWidth = 30;
 	str = "["
 	pos = int(barWidth * progress);
 	for i in xrange(barWidth):
