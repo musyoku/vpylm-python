@@ -14,7 +14,7 @@ if file_exists:
 
 # データの読み込み
 split_by = "word"
-line_list, n_vocab, n_data = dataset.load("alice", split_by=split_by, include_whitespace=False, bos_padding=ngram)
+lines, n_vocab, n_data = dataset.load("alice", split_by=split_by, include_whitespace=False, bos_padding=ngram)
 
 # 文章生成
 def generate_words():
@@ -54,7 +54,7 @@ def train():
 			is_first_addition = pickle.load(f)
 	else:
 		is_first_addition = []
-		for i, line in enumerate(line_list):
+		for i, line in enumerate(lines):
 			prev_order = []
 			for j in xrange(len(line)):
 				prev_order.append(-1)
@@ -72,7 +72,7 @@ def train():
 		start_time = time.time()
 		for train_step in xrange(n_data):
 			index = indices[train_step]
-			line = line_list[index]
+			line = lines[index]
 			new_order = model.perform_gibbs_sampling(line, is_first_addition[index])
 			is_first_addition[index] = False
 
@@ -84,7 +84,7 @@ def train():
 		# パープレキシティを計算
 		sum_log_Pw = 0
 		for index in xrange(n_data):
-			line = line_list[index]
+			line = lines[index]
 			sum_log_Pw += model.log_Pw(line) / len(line)
 		vpylm_ppl = math.exp(-sum_log_Pw / n_data);
 
@@ -114,10 +114,7 @@ def show_progress(step, total):
 			str += ">"
 		else:
 			str += " "
-	ret = "\r"
-	# if step == total - 1:
-	# 	ret = "\n"
-	sys.stdout.write("{}] {}%{}".format(str, int(progress * 100.0), ret))
+	sys.stdout.write("{}] {}%\r".format(str, int(progress * 100.0)))
 	sys.stdout.flush()
 
 def main():

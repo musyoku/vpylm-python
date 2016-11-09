@@ -28,24 +28,24 @@ private:
 public:
 	PyVPYLM(){
 		vpylm = new VPYLM();
-		c_printf("[n]%s", " VPYLMを初期化しています ...\n");
+		printf("VPYLMを初期化しています ...\n");
 	}
 
 	// 基底分布 i.e. 単語（文字）0-gram確率
 	// 1 / 単語数（文字数）でよい
 	void set_g0(double g0){
 		vpylm->_g0 = g0;
-		c_printf("[n]%s%f\n", " G0 <- ", g0);
+		printf("G0 <- %lf\n", g0);
 	}
 
-	bool save(){
-		c_printf("[n]%s", " VPYLMを保存しています ...\n");
-		return vpylm->save();
+	bool save(string filename){
+		printf("VPYLMを保存しています ...\n");
+		return vpylm->save(filename);
 	}
 
-	bool load(){
-		c_printf("[n]%s", " VPYLMを読み込んでいます ...\n");
-		return vpylm->load();
+	bool load(string filename){
+		printf("VPYLMを読み込んでいます ...\n");
+		return vpylm->load(filename);
 	}
 
 	python::list perform_gibbs_sampling(python::list &sentence, python::list &prev_orders){
@@ -57,7 +57,7 @@ public:
 
 		if(python::len(prev_orders) != word_ids.size()){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s", " prev_ordersとword_idsの長さが違います\n");
+			c_printf("[n] %s", "prev_ordersとword_idsの長さが違います\n");
 		}
 
 		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){
@@ -66,7 +66,7 @@ public:
 				bool success = vpylm->remove_customer_at_timestep(word_ids, w_t_i, n_t);
 				if(success == false){
 					c_printf("[R]%s", "エラー");
-					c_printf("[n]%s", " 客を除去できませんでした\n");
+					c_printf("[n] %s", "客を除去できませんでした\n");
 				}
 			}
 		}				
@@ -139,13 +139,13 @@ public:
 		return list_from_vector(new_order);
 	}
 
-	id sample_next_word(python::list &sentence){
+	id sample_next_token(python::list &sentence, id eos_id){
 		std::vector<id> word_ids;
 		int len = python::len(sentence);
 		for(int i = 0; i<len; i++) {
 			word_ids.push_back(python::extract<id>(sentence[i]));
 		}
-		return vpylm->sample_next_token(word_ids);
+		return vpylm->sample_next_token(word_ids, eos_id);
 	}
 
 	double log_Pw(python::list &sentence){
@@ -169,7 +169,7 @@ BOOST_PYTHON_MODULE(vpylm){
 	.def("get_strength_parameters", &PyVPYLM::get_strength_parameters)
 	.def("sample_hyperparameters", &PyVPYLM::sample_hyperparameters)
 	.def("log_Pw", &PyVPYLM::log_Pw)
-	.def("sample_next_word", &PyVPYLM::sample_next_word)
+	.def("sample_next_token", &PyVPYLM::sample_next_token)
 	.def("sample_orders", &PyVPYLM::sample_orders)
 	.def("get_node_count_for_each_depth", &PyVPYLM::get_node_count_for_each_depth)
 	.def("save", &PyVPYLM::save)

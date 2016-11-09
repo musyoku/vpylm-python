@@ -34,14 +34,14 @@ public:
 	// 1 / 単語数（文字数）でよい
 	void set_g0(double g0){
 		hpylm->_g0 = g0;
-		c_printf("[n]%s%f\n", "G0 <- ", g0);
+		printf("G0 <- %lf\n", g0);
 	}
 	bool save(string filename){
-		c_printf("[n]%s", "HPYLMを保存しています ...\n");
+		printf("HPYLMを保存しています ...\n");
 		return hpylm->save(filename);
 	}
 	bool load(string filename){
-		c_printf("[n]%s", "HPYLMを読み込んでいます ...\n");
+		printf("HPYLMを読み込んでいます ...\n");
 		return hpylm->load(filename);
 	}
 	void perform_gibbs_sampling(python::list &sentence, bool first_addition = false){

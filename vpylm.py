@@ -5,27 +5,34 @@ import vpylm
 import dataset
 
 # データの読み込み
-split_by = "char"
-line_list, n_vocab, n_data = dataset.load("beluga", split_by=split_by, include_whitespace=False)
+split_by = "word"
+lines, n_vocab, n_data = dataset.load("alice", split_by=split_by, include_whitespace=False)
 
+model_filename = "model/python_vpylm.model"
+trainer_filename = "model/python_vpylm.trainer"
 model = vpylm.vpylm()
-file_exists = model.load()
+file_exists = model.load(model_filename)
 if file_exists:
-	print "{} depth - {} nodes - {} customers".format(model.get_max_depth(), model.get_num_child_nodes(), model.get_num_customers())
+	print "VPYLMを読み込みました. {} depth - {} nodes - {} customers".format(model.get_max_depth(), model.get_num_nodes(), model.get_num_customers())
 
 # 文章生成
 def generate_words():
-	sentence = [dataset.word_to_id("<bos>")]
+	eos_id = dataset.word_to_id("<eos>")
+	bos_id = dataset.word_to_id("<bos>")
+	context_token_ids = [bos_id]
 	for i in xrange(100):
-		next_id = model.sample_next_word(sentence)
-		if next_id == 0:
+		next_id = model.sample_next_token(context_token_ids, eos_id)
+		if next_id == eos_id:
 			break
-		sentence.append(next_id)
-	sentence.append(dataset.word_to_id("<eos>"))
+		context_token_ids.append(next_id)
+	context_token_ids.append(eos_id)
 
 	str = ""
-	for i in xrange(1, len(sentence) - 1):
-		word = dataset.id_to_word(sentence[i])
+	for i in xrange(1, len(context_token_ids) - 1):
+		token_id = context_token_ids[i]
+		if token_id == bos_id:
+			continue
+		word = dataset.id_to_word(token_id)
 		str += word + (" " if split_by == "word" else "")
 	print str
 
@@ -35,7 +42,7 @@ def visualize_orders():
 	np.random.shuffle(indices)
 	for i in xrange(50):
 		index = indices[i]
-		line = line_list[index]
+		line = lines[index]
 		orders = model.sample_orders(line)
 		sentence_str = ""
 		order_str = ""
@@ -55,18 +62,19 @@ def visualize_orders():
 def visualize_ngram_occurrences():
 	counts = model.get_node_count_for_each_depth()
 	max_count = max(counts)
-	for ngram, count in enumerate(counts):
+	for depth, count in enumerate(counts):
+		ngram = depth + 1
 		print ngram, "#" * int(math.ceil(count / float(max_count) * 30)), count
 
 # VPYLMの学習
 def train():
 	# 前回推定したn-gramオーダー
-	if os.path.exists("prev_orders.dump"):
-		with open("prev_orders.dump", "rb") as f:
+	if os.path.exists(trainer_filename):
+		with open(trainer_filename, "rb") as f:
 			prev_order_list = pickle.load(f)
 	else:
 		prev_order_list = []
-		for i, line in enumerate(line_list):
+		for i, line in enumerate(lines):
 			prev_order = []
 			for j in xrange(len(line)):
 				prev_order.append(-1)
@@ -74,19 +82,17 @@ def train():
 
 	model.set_g0(1.0 / n_vocab)
 
-	max_epoch = 1000
+	max_epoch = 100
 	seed = 0
 	np.random.seed(seed)
 	indices = np.arange(n_data)
 
 	for epoch in xrange(1, max_epoch + 1):
-
-		print "Epoch {}/{}".format(epoch, max_epoch)
 		np.random.shuffle(indices)
 		start_time = time.time()
 		for train_step in xrange(n_data):
 			index = indices[train_step]
-			line = line_list[index]
+			line = lines[index]
 			prev_order = prev_order_list[index]
 			new_order = model.perform_gibbs_sampling(line, prev_order)
 			prev_order_list[index] = new_order[:]
@@ -96,31 +102,30 @@ def train():
 
 		model.sample_hyperparameters()
 
-		if epoch % 20 == 0:
-			# パープレキシティを計算
-			sum_log_Pw = 0
-			for index in xrange(n_data):
-				line = line_list[index]
-				sum_log_Pw += model.compute_log_Pw(line) / len(line)
-			vpylm_ppl = math.exp(-sum_log_Pw / n_data);
+		# パープレキシティを計算
+		sum_log_Pw = 0
+		for index in xrange(n_data):
+			line = lines[index]
+			sum_log_Pw += model.log_Pw(line) / len(line)
+		vpylm_ppl = math.exp(-sum_log_Pw / n_data);
 
-			lines_per_sec = n_data / float(time.time() - start_time)
-			print "{:.2f} lines / sec - {:.2f} ppl - {} depth - {} nodes - {} customers".format(lines_per_sec, vpylm_ppl, model.get_max_depth(), model.get_num_child_nodes(), model.get_num_customers())
+		lines_per_sec = n_data / float(time.time() - start_time)
+		print "Epoch {} / {} - {:.2f} lps - {:.2f} ppl - {} depth - {} nodes - {} customers".format(epoch, max_epoch, lines_per_sec, vpylm_ppl, model.get_max_depth(), model.get_num_nodes(), model.get_num_customers())
 		# print model.get_discount_parameters()
 		# print model.get_strength_parameters()
 
 		if epoch % 100 == 0:
-			model.save()
-			with open("prev_orders.dump", "wb") as f:
+			model.save(model_filename)
+			with open(trainer_filename, "wb") as f:
 				pickle.dump(prev_order_list, f)
 
-	model.save()
-	with open("prev_orders.dump", "wb") as f:
+	model.save(model_filename)
+	with open(trainer_filename, "wb") as f:
 		pickle.dump(prev_order_list, f)
 
 def show_progress(step, total):
 	progress = step / float(total - 1)
-	barWidth = 70;
+	barWidth = 30;
 	str = "["
 	pos = int(barWidth * progress);
 	for i in xrange(barWidth):
@@ -130,20 +135,14 @@ def show_progress(step, total):
 			str += ">"
 		else:
 			str += " "
-	ret = "\r"
-	if step == total - 1:
-		ret = "\n"
-	sys.stdout.write("{}] {}%{}".format(str, int(progress * 100.0), ret))
+	sys.stdout.write("{}] {}%\r".format(str, int(progress * 100.0)))
 	sys.stdout.flush()
 
 def main():
 	train()
-
 	for n in xrange(100):
 		generate_words()
-
 	# visualize_orders()
-
 	visualize_ngram_occurrences()
 
 if __name__ == "__main__":

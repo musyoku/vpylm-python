@@ -335,31 +335,6 @@ public:
 		}
 		return sampled_word_id;
 	}
-	// void save(string dir = "model/"){
-	// 	string filename = "vpylm.model";
-	// 	std::ofstream ofs(filename);
-	// 	boost::archive::binary_oarchive oarchive(ofs);
-	// 	oarchive << static_cast<const VPYLM&>(*this);
-	// 	// cout << "saved to " << filename << endl;
-	// 	// cout << "	num_customers: " << get_num_customers() << endl;
-	// 	// cout << "	num_nodes: " << get_num_child_nodes() << endl;
-	// 	// cout << "	max_depth: " << get_max_depth() << endl;
-	// 	return true;
-	// }
-	// bool load(){
-	// 	string filename = "vpylm.model";
-	// 	std::ifstream ifs(filename);
-	// 	if(ifs.good()){
-	// 		// cout << "loading " << filename << endl;
-	// 		boost::archive::binary_iarchive iarchive(ifs);
-	// 		iarchive >> *this;
-	// 		// cout << "	num_customers: " << get_num_customers() << endl;
-	// 		// cout << "	num_nodes: " << get_num_child_nodes() << endl;
-	// 		// cout << "	max_depth: " << get_max_depth() << endl;
-	// 		return true;
-	// 	}
-	// 	return false;
-	// }
 };
 
 #endif
