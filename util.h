@@ -22,15 +22,15 @@ vector<wstring> split(const wstring &s, char delim){
 }
 
 // スペースで分割する
-Vocab* load_words_in_textfile(string &filename, vector<vector<id>> &dataset, int padding_bos){
+void load_words_in_textfile(string &filename, vector<vector<id>> &dataset, Vocab* &vocab, int padding_bos){
 	wifstream ifs(filename.c_str());
 	wstring str;
 	if (ifs.fail()){
 		c_printf("[R]%s", "エラー");
 		c_printf("[n] %s%s\n", filename.c_str(), "を開けません.");
-		return NULL;
+		exit(1);
 	}
-	Vocab* vocab = new Vocab();
+	vocab = new Vocab();
 	id bos_id = vocab->add_string(L"<bos>");
 	id eos_id = vocab->add_string(L"<eos>");
 	id unk_id = vocab->add_string(L"<unk>");
@@ -54,19 +54,18 @@ Vocab* load_words_in_textfile(string &filename, vector<vector<id>> &dataset, int
 		}
 	}
 	cout << filename << "を読み込みました（" << dataset.size() << "行）" << endl;
-	return vocab;
 }
 
 // 文字n-gramの学習
-Vocab* load_characters_in_textfile(string &filename, vector<vector<id>> &dataset, int ngram){
+void load_characters_in_textfile(string &filename, vector<vector<id>> &dataset, Vocab* &vocab, int ngram){
 	wifstream ifs(filename.c_str());
 	wstring str;
 	if (ifs.fail()){
 		c_printf("[R]%s", "エラー");
 		c_printf("[n] %s%s\n", filename.c_str(), "を開けません.");
-		return NULL;
+		exit(1);
 	}
-	Vocab* vocab = new Vocab();
+	vocab = new Vocab();
 	id bos_id = vocab->add_string(L"<bos>");
 	id eos_id = vocab->add_string(L"<eos>");
 	id unk_id = vocab->add_string(L"<unk>");
@@ -89,7 +88,6 @@ Vocab* load_characters_in_textfile(string &filename, vector<vector<id>> &dataset
 		}
 	}
 	cout << filename << "を読み込みました（" << dataset.size() << "行）" << endl;
-	return vocab;
 }
 
 void show_progress(int step, int total){

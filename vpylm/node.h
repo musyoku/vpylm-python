@@ -405,7 +405,7 @@ public:
 	void count_node_of_each_depth(unordered_map<id, int> &counts){
 		for(auto elem: _arrangement){
 			id token_id = elem.first;
-			counts[_depth + 1] += 1;
+			counts[_depth] += 1;
 		}
 		for(auto elem: _children){
 			elem.second->count_node_of_each_depth(counts);

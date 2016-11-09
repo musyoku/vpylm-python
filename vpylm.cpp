@@ -80,7 +80,7 @@ public:
 				ppl += log_p;
 			}
 			ppl = exp(-ppl / num_data);
-			printf("Epoch %d / %d - %.1f fps - %.3f ppl\n", epoch, max_epoch, (double)num_data / msec * 1000.0, ppl);
+			printf("Epoch %d / %d - %.1f lps - %.3f ppl - %d nodes - %d customers\n", epoch, max_epoch, (double)num_data / msec * 1000.0, ppl, vpylm->get_num_nodes(), vpylm->get_num_customers());
 
 			if(epoch % 100 == 0){
 				vpylm->save(vpylm_filename);
@@ -182,14 +182,17 @@ int main(int argc, char *argv[]){
 		}
 	}
 	vector<vector<id>> dataset;
-	Vocab* vocab = load_words_in_textfile(text_filename, dataset, 1);
+	Vocab* vocab;
+	load_words_in_textfile(text_filename, dataset, vocab, 1);
+
 	string vocab_filename = "model/vpylm.vocab";
 	vocab->load(vocab_filename);
+	vocab->save(vocab_filename);
+
 	int num_chars = vocab->num_tokens();
 	double g0 = (1.0 / num_chars);
 	Model* vpylm = new Model(g0);
 	vpylm->train(vocab, dataset);
 	// vpylm->generate_words(vocab, dataset, L" ");
-	vocab->save(vocab_filename);
 	return 0;
 }

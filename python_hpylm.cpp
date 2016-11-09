@@ -36,13 +36,13 @@ public:
 		hpylm->_g0 = g0;
 		c_printf("[n]%s%f\n", "G0 <- ", g0);
 	}
-	bool save(){
+	bool save(string filename){
 		c_printf("[n]%s", "HPYLMを保存しています ...\n");
-		return hpylm->save();
+		return hpylm->save(filename);
 	}
-	bool load(){
+	bool load(string filename){
 		c_printf("[n]%s", "HPYLMを読み込んでいます ...\n");
-		return hpylm->load();
+		return hpylm->load(filename);
 	}
 	void perform_gibbs_sampling(python::list &sentence, bool first_addition = false){
 		std::vector<id> token_ids;
@@ -88,13 +88,13 @@ public:
 	void sample_hyperparameters(){
 		hpylm->sample_hyperparams();
 	}
-	id sample_next_token(python::list &sentence, id eos_id){
-		std::vector<id> token_ids;
-		int len = python::len(sentence);
+	id sample_next_token(python::list &_context_token_ids, id eos_id){
+		std::vector<id> context_token_ids;
+		int len = python::len(_context_token_ids);
 		for(int i = 0; i<len; i++) {
-			token_ids.push_back(python::extract<id>(sentence[i]));
+			context_token_ids.push_back(python::extract<id>(_context_token_ids[i]));
 		}
-		return hpylm->sample_next_token(token_ids, eos_id);
+		return hpylm->sample_next_token(context_token_ids, eos_id);
 	}
 	double log_Pw(python::list &sentence){
 		std::vector<id> token_ids;

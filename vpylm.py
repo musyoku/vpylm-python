@@ -13,7 +13,6 @@ file_exists = model.load()
 if file_exists:
 	print "{} depth - {} nodes - {} customers".format(model.get_max_depth(), model.get_num_child_nodes(), model.get_num_customers())
 
-
 # 文章生成
 def generate_words():
 	sentence = [dataset.word_to_id("<bos>")]
@@ -56,9 +55,8 @@ def visualize_orders():
 def visualize_ngram_occurrences():
 	counts = model.get_node_count_for_each_depth()
 	max_count = max(counts)
-	for n, count in enumerate(counts):
-		print n, "#" * int(math.ceil(count / float(max_count) * 30)), count
-
+	for ngram, count in enumerate(counts):
+		print ngram, "#" * int(math.ceil(count / float(max_count) * 30)), count
 
 # VPYLMの学習
 def train():

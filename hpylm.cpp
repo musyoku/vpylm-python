@@ -124,7 +124,7 @@ void train(Vocab* vocab, vector<vector<id>> &dataset, int ngram){
 			ppl += log_p;
 		}
 		ppl = exp(-ppl / num_data);
-		printf("Epoch %d / %d - %.1f fps - %.3f ppl\n", epoch, max_epoch, (double)num_data / msec * 1000.0, ppl);
+		printf("Epoch %d / %d - %.1f lps - %.3f ppl - %d nodes - %d customers\n", epoch, max_epoch, (double)num_data / msec * 1000.0, ppl, hpylm->get_num_nodes(), hpylm->get_num_customers());
 		if(epoch % 100 == 0){
 			hpylm->save(hpylm_filename);
 			std::ofstream ofs(trainer_filename);
@@ -195,7 +195,8 @@ int main(int argc, char *argv[]){
 		}
 	}
 	vector<vector<id>> dataset;
-	Vocab* vocab = load_words_in_textfile(text_filename, dataset, ngram);
+	Vocab* vocab;
+	load_words_in_textfile(text_filename, dataset, vocab, ngram);
 	train(vocab, dataset, ngram);
 	generate_words(vocab, dataset, L" ");
 	return 0;

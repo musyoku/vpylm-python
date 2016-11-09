@@ -80,7 +80,7 @@ public:
 	int num_tokens(){
 		return _string_by_token_id.size();
 	}
-	void save(string filename = "vocab.dump"){
+	void save(string filename){
 		std::ofstream ofs(filename);
 		boost::archive::binary_oarchive oarchive(ofs);
 		oarchive << static_cast<const Vocab&>(*this);
@@ -89,7 +89,7 @@ public:
 		// cout << "	num_reusable_ids: " << _reusable_token_ids.size() << endl;
 	}
 
-	void load(string filename = "vocab.dump"){
+	void load(string filename){
 		std::ifstream ifs(filename);
 		if(ifs.good()){
 			// cout << "loading " << filename << endl;

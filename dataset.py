@@ -6,12 +6,14 @@ import codecs
 vocab = {}
 inv_vocab = {}
 
-def load(dir, split_by="word", include_whitespace=False):
+def load(dir, split_by="word", include_whitespace=False, bos_padding=1):
 	fs = os.listdir(dir)
 	print len(fs), "ファイルを読み込み中 ..."
 	data = []
-	vocab["<eos>"] = 0
-	vocab["<bos>"] = 1
+	vocab["<eos>"] = 1
+	vocab["<bos>"] = 2
+	vocab["<unk>"] = 3
+	bos_id = vocab["<bos>"]
 	for (id, word) in enumerate(vocab):
 		inv_vocab[id] = word
 
@@ -22,6 +24,8 @@ def load(dir, split_by="word", include_whitespace=False):
 				line = line.replace("\n", "")
 				line = line.replace("\r", "")
 				ids = []
+				for i in xrange(bos_padding):
+					ids.append(bos_id)
 
 				# 文字n-gramの場合
 				if split_by == "char" or split_by == "character":
