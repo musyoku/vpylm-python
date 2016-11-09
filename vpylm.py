@@ -13,7 +13,10 @@ trainer_filename = "model/python_vpylm.trainer"
 model = vpylm.vpylm()
 file_exists = model.load(model_filename)
 if file_exists:
-	print "VPYLMを読み込みました. {} depth - {} nodes - {} customers".format(model.get_max_depth(), model.get_num_nodes(), model.get_num_customers())
+	print "VPYLMを読み込みました."
+	print "{} depth - {} nodes - {} customers".format(model.get_max_depth(), model.get_num_nodes(), model.get_num_customers())
+	print "d:", model.get_discount_parameters()
+	print "theta:", model.get_strength_parameters()
 
 # 文章生成
 def generate_words():
@@ -60,11 +63,12 @@ def visualize_orders():
 
 # n-gramオーダーのデータでの分布を可視化
 def visualize_ngram_occurrences():
-	counts = model.get_node_count_for_each_depth()
+	print "推定された各オーダーのデータ全体に対する割合"
+	counts = model.count_tokens_of_each_depth()
 	max_count = max(counts)
 	for depth, count in enumerate(counts):
 		ngram = depth + 1
-		print ngram, "#" * int(math.ceil(count / float(max_count) * 30)), count
+		print "{:2d}-gram".format(ngram), "#" * int(math.ceil(count / float(max_count) * 30)), count
 
 # VPYLMの学習
 def train():
@@ -139,7 +143,9 @@ def show_progress(step, total):
 	sys.stdout.flush()
 
 def main():
-	train()
+	model.get_phrases_at_depth(7)
+	raise Exception()
+	# train()
 	for n in xrange(100):
 		generate_words()
 	# visualize_orders()

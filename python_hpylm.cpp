@@ -66,15 +66,15 @@ public:
 	int get_num_customers(){
 		return hpylm->get_num_customers();
 	}
-	python::list get_node_count_for_each_depth(){
-		unordered_map<id, int> map;
-		hpylm->count_node_of_each_depth(map);
+	python::list count_tokens_of_each_depth(){
+		unordered_map<int, int> counts_by_depth;
+		vpylm->count_tokens_of_each_depth(counts_by_depth);
+
+		// ソート
+		std::map<int, int> sorted_counts_by_depth(counts_by_depth.begin(), counts_by_depth.end());
+
 		std::vector<int> counts;
-		std::map<int, int> ordered(map.begin(), map.end());
-		
-		// 0-gram
-		counts.push_back(0);
-		for(auto it = ordered.begin(); it != ordered.end(); ++it){
+		for(auto it = sorted_counts_by_depth.begin(); it != sorted_counts_by_depth.end(); ++it){
 			counts.push_back(it->second);
 		}
 		return list_from_vector(counts);
@@ -118,7 +118,7 @@ BOOST_PYTHON_MODULE(hpylm){
 	.def("sample_hyperparameters", &PyHPYLM::sample_hyperparameters)
 	.def("log_Pw", &PyHPYLM::log_Pw)
 	.def("sample_next_token", &PyHPYLM::sample_next_token)
-	.def("get_node_count_for_each_depth", &PyHPYLM::get_node_count_for_each_depth)
+	.def("count_tokens_of_each_depth", &PyHPYLM::count_tokens_of_each_depth)
 	.def("save", &PyHPYLM::save)
 	.def("load", &PyHPYLM::load);
 }

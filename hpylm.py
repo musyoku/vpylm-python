@@ -10,7 +10,10 @@ trainer_filename = "model/python_hpylm.trainer"
 model = hpylm.hpylm(ngram)
 file_exists = model.load(model_filename)
 if file_exists:
-	print "HPYLMを読み込みました. {} depth - {} nodes - {} customers".format(model.get_max_depth(), model.get_num_nodes(), model.get_num_customers())
+	print "HPYLMを読み込みました."
+	print "{} depth - {} nodes - {} customers".format(model.get_max_depth(), model.get_num_nodes(), model.get_num_customers())
+	print "d:", model.get_discount_parameters()
+	print "theta:", model.get_strength_parameters()
 
 # データの読み込み
 split_by = "word"
@@ -41,7 +44,7 @@ def generate_words():
 
 # n-gramオーダーのデータでの分布を可視化
 def visualize_ngram_occurrences():
-	counts = model.get_node_count_for_each_depth()
+	counts = model.count_tokens_of_each_depth()
 	max_count = max(counts)
 	for depth, count in enumerate(counts):
 		ngram = depth + 1
@@ -118,7 +121,7 @@ def show_progress(step, total):
 	sys.stdout.flush()
 
 def main():
-	# train()
+	train()
 	for n in xrange(100):
 		generate_words()
 	visualize_ngram_occurrences()

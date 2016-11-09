@@ -402,13 +402,20 @@ public:
 			elem.second->set_active_tokens(flags);
 		}
 	}
-	void count_node_of_each_depth(unordered_map<id, int> &counts){
+	void count_tokens_of_each_depth(unordered_map<int, int> &counts){
 		for(auto elem: _arrangement){
-			id token_id = elem.first;
 			counts[_depth] += 1;
 		}
 		for(auto elem: _children){
-			elem.second->count_node_of_each_depth(counts);
+			elem.second->count_tokens_of_each_depth(counts);
+		}
+	}
+	void get_nodes_at_depth(int depth, vector<Node*> &nodes){
+		if(_depth == depth){
+			nodes.push_back(this);
+		}
+		for(auto elem: _children){
+			elem.second->get_nodes_at_depth(depth, nodes);
 		}
 	}
 	// dとθの推定用
