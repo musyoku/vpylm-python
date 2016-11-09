@@ -118,8 +118,8 @@ void train(Vocab* vocab, vector<vector<id>> &dataset, int ngram){
 
 		// パープレキシティ
 		double ppl = 0;
-		for(int step = 0;step < num_data;step++){
-			vector<id> &token_ids = dataset[step];
+		for(int data_index = 0;data_index < num_data;data_index++){
+			vector<id> &token_ids = dataset[data_index];
 			double log_p = hpylm->log2_Pw(token_ids) / token_ids.size();
 			ppl += log_p;
 		}

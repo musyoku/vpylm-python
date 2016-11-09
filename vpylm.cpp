@@ -188,8 +188,8 @@ int main(int argc, char *argv[]){
 	int num_chars = vocab->num_tokens();
 	double g0 = (1.0 / num_chars);
 	Model* vpylm = new Model(g0);
-	// vpylm->train(vocab, dataset);
-	vpylm->generate_words(vocab, dataset, L" ");
+	vpylm->train(vocab, dataset);
+	// vpylm->generate_words(vocab, dataset, L" ");
 	vocab->save(vocab_filename);
 	return 0;
 }

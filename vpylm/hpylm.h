@@ -301,7 +301,8 @@ public:
 
 		// それ以外
 		_max_depth = 0;
-		// _bottomは以下を実行すると更新される
+		// _max_depthは以下を実行すると更新される
+		// HPYLMでは無意味だがVPYLMで最大深さを求める時に使う
 		sum_auxiliary_variables_recursively(_root, sum_log_x_u_m, sum_y_ui_m, sum_1_y_ui_m, sum_1_z_uwkj_m, _max_depth);
 		init_hyperparameters_at_depth_if_needed(_max_depth);
 
