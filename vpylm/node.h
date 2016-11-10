@@ -410,12 +410,12 @@ public:
 			elem.second->count_tokens_of_each_depth(counts);
 		}
 	}
-	void get_nodes_at_depth(int depth, vector<Node*> &nodes){
+	void enumerate_nodes_at_depth(int depth, vector<Node*> &nodes){
 		if(_depth == depth){
 			nodes.push_back(this);
 		}
 		for(auto elem: _children){
-			elem.second->get_nodes_at_depth(depth, nodes);
+			elem.second->enumerate_nodes_at_depth(depth, nodes);
 		}
 	}
 	// dとθの推定用

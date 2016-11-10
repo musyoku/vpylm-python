@@ -112,14 +112,20 @@ public:
 		cout << vpylm->get_sum_stop_counts() << endl;
 		cout << vpylm->get_sum_pass_counts() << endl;
 	}
-	void generate_words(Vocab* vocab, vector<vector<id>> &dataset, wstring spacer){
-		string vpylm_filename = "model/vpylm.model";
-		string vocab_filename = "model/vpylm.vocab";
-
-		VPYLM* vpylm = new VPYLM();
-		vpylm->load(vpylm_filename);
-		vocab->load(vocab_filename);
-
+	void enumerate_phrases_at_depth(Vocab* vocab, int depth, wstring spacer){
+		c_printf("[*]深さ%dの句を表示します\n", depth);
+		vector<vector<id>> phrases;
+		vpylm->enumerate_phrases_at_depth(depth, phrases);
+		for(int i = 0;i < phrases.size();i++){
+			vector<id> &phrase = phrases[i];
+			for(int j = 0;j < phrase.size();j++){
+				wstring str = vocab->token_id_to_string(phrase[j]);
+				wcout << str << spacer;
+			}
+			cout << endl;
+		}
+	}
+	void generate_words(Vocab* vocab, wstring spacer){
 		int num_sample = 50;
 		int max_length = 400;
 		id bos_id = vocab->string_to_token_id(L"<bos>");
@@ -192,7 +198,8 @@ int main(int argc, char *argv[]){
 	int num_chars = vocab->num_tokens();
 	double g0 = (1.0 / num_chars);
 	Model* vpylm = new Model(g0);
-	vpylm->train(vocab, dataset);
-	// vpylm->generate_words(vocab, dataset, L" ");
+	// vpylm->train(vocab, dataset);
+	vpylm->generate_words(vocab, L" ");
+	vpylm->enumerate_phrases_at_depth(vocab, 6, L" ");
 	return 0;
 }

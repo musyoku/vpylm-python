@@ -64,10 +64,10 @@ def load(dir, split_by="word", include_whitespace=False, bos_padding=1):
 	return data, n_vocab, n_data
 
 
-def ids_to_sentence(ids):
+def ids_to_sentence(ids, spacer=" "):
 	sentence = ""
 	for id in ids:
-		sentence += id_to_word(id)
+		sentence += id_to_word(id) + spacer
 	return sentence
 
 def id_to_word(id):

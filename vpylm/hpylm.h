@@ -360,17 +360,25 @@ public:
 	void count_tokens_of_each_depth(unordered_map<int, int> &map){
 		_root->count_tokens_of_each_depth(map);
 	}
-	void get_phrases_at_depth(int depth, vector<vector<id>> &phrases){
+	void enumerate_phrases_at_depth(int depth, vector<vector<id>> &phrases){
 		int max_depth = get_max_depth();
 		if(depth > max_depth){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n] %s\n", "指定の深さにはフレーズは存在しません.");
+			c_printf("[n] %s\n", "指定の深さにフレーズが存在しません.");
 			return;
 		}
 		// 指定の深さのノードを探索
 		vector<Node*> nodes;
-		_root->get_nodes_at_depth(depth, nodes);
-		cout << nodes.size() << endl;
+		_root->enumerate_nodes_at_depth(depth, nodes);
+		for(int i = 0;i < nodes.size();i++){
+			Node* node = nodes[i];
+			vector<id> phrase;
+			while(node->_parent){
+				phrase.push_back(node->_token_id);
+				node = node->_parent;
+			}
+			phrases.push_back(phrase);
+		}
 	}
 	bool save(string filename = "hpylm.model"){
 		std::ofstream ofs(filename);

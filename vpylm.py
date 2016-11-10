@@ -70,6 +70,11 @@ def visualize_ngram_occurrences():
 		ngram = depth + 1
 		print "{:2d}-gram".format(ngram), "#" * int(math.ceil(count / float(max_count) * 30)), count
 
+def enumerate_phrases():
+	phrases = model.enumerate_phrases_at_depth(6)
+	for phrase in phrases:
+		print dataset.ids_to_sentence(phrase)
+
 # VPYLMの学習
 def train():
 	# 前回推定したn-gramオーダー
@@ -143,12 +148,10 @@ def show_progress(step, total):
 	sys.stdout.flush()
 
 def main():
-	model.get_phrases_at_depth(7)
-	raise Exception()
 	# train()
 	for n in xrange(100):
 		generate_words()
-	# visualize_orders()
+	visualize_orders()
 	visualize_ngram_occurrences()
 
 if __name__ == "__main__":

@@ -133,9 +133,14 @@ public:
 		}
 		return vpylm->log_Pw(word_ids);
 	}
-	void get_phrases_at_depth(int depth){
-		vector<vector<id>> phrases;
-		vpylm->get_phrases_at_depth(depth, phrases);
+	python::list enumerate_phrases_at_depth(int depth){
+		vector<vector<id>> phrase_vectors;
+		vpylm->enumerate_phrases_at_depth(depth, phrase_vectors);
+		python::list phrases;
+		for(int i = 0;i < phrase_vectors.size();i++){
+			phrases.append(list_from_vector(phrase_vectors[i]));
+		}
+		return phrases;
 	}
 };
 
@@ -153,7 +158,7 @@ BOOST_PYTHON_MODULE(vpylm){
 	.def("sample_next_token", &PyVPYLM::sample_next_token)
 	.def("sample_orders", &PyVPYLM::sample_orders)
 	.def("count_tokens_of_each_depth", &PyVPYLM::count_tokens_of_each_depth)
-	.def("get_phrases_at_depth", &PyVPYLM::get_phrases_at_depth)
+	.def("enumerate_phrases_at_depth", &PyVPYLM::enumerate_phrases_at_depth)
 	.def("save", &PyVPYLM::save)
 	.def("load", &PyVPYLM::load);
 }

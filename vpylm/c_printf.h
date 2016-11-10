@@ -16,6 +16,7 @@
 #define BGRED   "\x1b[41;97m"
 // Normal == No color
 #define NORMAL  "\x1b[0m"
+#define BOLDNORMAL  "\x1b[0mBold"
 
 
 int c_printf(const char*, ...);
@@ -36,6 +37,7 @@ static const char *c_key(char k) {
 	case 'c': return CYAN;
 	case 'R': return BGRED;
 	case 'n': return NORMAL;
+	case '*': return BOLDNORMAL;
 	default:
 		// Yes, we use c_printf lib on c_printf source. :)
 		// Best dogfooding example?
