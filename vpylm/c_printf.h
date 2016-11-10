@@ -7,16 +7,15 @@
 #include <ctype.h>
 
 // We define colors in ANSI escape codes.
-#define RED     "\x1b[31m"
+#define RED     "\x1b[31;1m"
 #define GREEN   "\x1b[32m"
 #define YELLOW  "\x1b[33m"
 #define BLUE    "\x1b[34m"
 #define MAGENTA "\x1b[35m"
 #define CYAN    "\x1b[36m"
-#define BGRED   "\x1b[41;97m"
 // Normal == No color
 #define NORMAL  "\x1b[0m"
-#define BOLDNORMAL  "\x1b[0mBold"
+#define BOLDNORMAL  "\x1b[1m"
 
 
 int c_printf(const char*, ...);
@@ -35,7 +34,6 @@ static const char *c_key(char k) {
 	case 'b': return BLUE;
 	case 'm': return MAGENTA;
 	case 'c': return CYAN;
-	case 'R': return BGRED;
 	case 'n': return NORMAL;
 	case '*': return BOLDNORMAL;
 	default:

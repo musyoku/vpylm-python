@@ -51,14 +51,12 @@ public:
 	// order_tはw_tから見た深さ
 	bool add_customer_at_timestep(vector<id> &token_ids, int token_t_index, int order_t){
 		if(order_t > token_t_index){
-			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " 客を追加できません. 不正な深さです.");
+			c_printf("[r]%s [*]%s\n", "エラー:", "客を追加できません. 不正な深さです.");
 			return false;
 		}
 		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, order_t, true);
 		if(node == NULL){
-			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " 客を追加できません. ノードが見つかりません.");
+			c_printf("[r]%s [*]%s\n", "エラー:", "客を追加できません. ノードが見つかりません.");
 			return false;
 		}
 		id token_t = token_ids[token_t_index];
@@ -67,8 +65,7 @@ public:
 	bool remove_customer_at_timestep(vector<id> &token_ids, int token_t_index, int order_t){
 		Node* node = find_node_by_tracing_back_context(token_ids, token_t_index, order_t, true);
 		if(node == NULL){
-			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " 客を除去できません. ノードが見つかりません.");
+			c_printf("[r]%s [*]%s\n", "エラー:", "客を除去できません. ノードが見つかりません.");
 			return false;
 		}
 		id token_t = token_ids[token_t_index];
@@ -80,11 +77,11 @@ public:
 		}
 		return true;
 	}
-	int sample_order_at_timestep(vector<id> &context_ids, int token_t_index){
+	int sample_order_at_timestep(vector<id> &context_token_ids, int token_t_index){
 		if(token_t_index == 0){
 			return 0;
 		}
-		id token_t = context_ids[token_t_index];
+		id token_t = context_token_ids[token_t_index];
 		vector<double> probs;
 		double sum_p_stpp = 0;
 
@@ -109,7 +106,7 @@ public:
 					break;
 				}
 				if(n < token_t_index){
-					id context_token_id = context_ids[token_t_index - n - 1];
+					id context_token_id = context_token_ids[token_t_index - n - 1];
 					node = node->find_child_node(context_token_id);
 				}
 			}else{
@@ -136,19 +133,19 @@ public:
 		}
 		return probs.size() - 1;
 	}
-	double Pw_h(vector<id> &word_ids, vector<id> context_ids){
+	double Pw_h(vector<id> &word_ids, vector<id> context_token_ids){
 		double p = 1;
 		for(int n = 0;n < word_ids.size();n++){
-			p *= Pw_h(word_ids[n], context_ids);
-			context_ids.push_back(word_ids[n]);
+			p *= Pw_h(word_ids[n], context_token_ids);
+			context_token_ids.push_back(word_ids[n]);
 		}
 		return p;
 	}
-	double Pw_h(id word_id, vector<id> &context_ids){
+	double Pw_h(id token_id, vector<id> &context_token_ids){
 		Node* node = _root;
 		int depth = 0;
-		for(;depth < context_ids.size();depth++){
-			id context_token_id = context_ids[context_ids.size() - depth - 1];
+		for(;depth < context_token_ids.size();depth++){
+			id context_token_id = context_token_ids[context_token_ids.size() - depth - 1];
 			if(node == NULL){
 				break;
 			}
@@ -160,24 +157,21 @@ public:
 		}
 		double p = 0;
 		for(int n = 0;n <= depth;n++){
-			double a = Pw_hn(word_id, context_ids, n);
-			double b = Pn_h(n, context_ids);
+			double a = Pw_hn(token_id, context_token_ids, n);
+			double b = Pn_h(n, context_token_ids);
 			p += a * b;
 		}
 		return p;
 	}
-	double Pw_hn(id word_id, vector<id> &context_ids, int n){
-		if(n > context_ids.size()){
-			printf("\x1b[41;97m");
-			printf("WARNING");
-			printf("\x1b[49;39m");
-			printf(" n > context_ids.size() at VPYLM::Pw_hn\n");
+	double Pw_hn(id token_id, vector<id> &context_token_ids, int n){
+		if(n > context_token_ids.size()){
+			c_printf("[r]%s [*]%s\n", "エラー:", "n > context_token_ids.size()");
 			return 0;
 		}
 		Node* node = _root;
 		int depth = 0;
 		for(;depth < n;depth++){
-			id context_token_id = context_ids[context_ids.size() - depth - 1];
+			id context_token_id = context_token_ids[context_token_ids.size() - depth - 1];
 			if(node == NULL){
 				break;
 			}
@@ -188,27 +182,21 @@ public:
 			node = child;
 		}
 		if(depth != n){
-			printf("\x1b[41;97m");
-			printf("WARNING");
-			printf("\x1b[49;39m");
-			printf(" depth != n at VPYLM::Pw_hn\n");
+			c_printf("[r]%s [*]%s\n", "エラー:", "depth != n");
 			return 0;
 		}
-		double p = node->Pw(word_id, _g0, _d_m, _theta_m);
+		double p = node->Pw(token_id, _g0, _d_m, _theta_m);
 		return p;
 	}
-	double Pn_h(int n, vector<id> &context_ids){
-		if(n > context_ids.size()){
-			printf("\x1b[41;97m");
-			printf("WARNING");
-			printf("\x1b[49;39m");
-			printf(" n > context_ids.size() at VPYLM::Pw_h\n");
+	double Pn_h(int n, vector<id> &context_token_ids){
+		if(n > context_token_ids.size()){
+			c_printf("[r]%s [*]%s\n", "n > context_token_ids.size()");
 			return 0;
 		}
 		Node* node = _root;
 		int depth = 0;
 		for(;depth < n;depth++){
-			id context_token_id = context_ids[context_ids.size() - depth - 1];
+			id context_token_id = context_token_ids[context_token_ids.size() - depth - 1];
 			if(node == NULL){
 				break;
 			}
@@ -219,10 +207,7 @@ public:
 			node = child;
 		}
 		if(depth != n){
-			printf("\x1b[41;97m");
-			printf("WARNING");
-			printf("\x1b[49;39m");
-			printf(" depth != n at VPYLM::Pn_h\n");
+			c_printf("[r]%s [*]%s\n", "depth != n");
 			return 0;
 		}
 		return node->stop_probability(_beta_stop, _beta_pass);
@@ -234,12 +219,12 @@ public:
 		id w_0 = word_ids[0];
 		double p0 = _root->Pw(w_0, _g0, _d_m, _theta_m) * _root->stop_probability(_beta_stop, _beta_pass);
 		double p = p0;
-		vector<id> context_ids(word_ids.begin(), word_ids.begin() + 1);
+		vector<id> context_token_ids(word_ids.begin(), word_ids.begin() + 1);
 		for(int depth = 1;depth < word_ids.size();depth++){
 			id word = word_ids[depth];
-			double _p = Pw_h(word, context_ids);
+			double _p = Pw_h(word, context_token_ids);
 			p *= _p;
-			context_ids.push_back(word_ids[depth]);
+			context_token_ids.push_back(word_ids[depth]);
 		}
 		return p;
 	}
@@ -265,8 +250,8 @@ public:
 		}
 		return sum_Pw_h;
 	}
-	id sample_next_token(vector<id> &context_ids, id eos_id){
-		int token_t_index = context_ids.size() - 1;
+	id sample_next_token(vector<id> &context_token_ids, id eos_id){
+		int token_t_index = context_token_ids.size() - 1;
 		Node* node = _root;
 		vector<double> probs;
 		vector<Node*> nodes;
@@ -277,7 +262,7 @@ public:
 
 		for(int n = 0;n <= token_t_index;n++){
 			if(node){
-				id context_token_id = context_ids[token_t_index - n];
+				id context_token_id = context_token_ids[token_t_index - n];
 				node = node->find_child_node(context_token_id);
 				if(node == NULL){
 					break;
@@ -308,10 +293,10 @@ public:
 		probs.clear();
 		sum = 0;
 		for(auto elem: node->_arrangement){
-			id word_id = elem.first;
-			double p = Pw_h(word_id, context_ids);
+			id token_id = elem.first;
+			double p = Pw_h(token_id, context_token_ids);
 			if(p > 0){
-				word_ids.push_back(word_id);
+				word_ids.push_back(token_id);
 				probs.push_back(p);
 				sum += p;
 			}

@@ -72,7 +72,7 @@ public:
 	wstring token_id_to_string(id token_id){
 		if(_string_by_token_id.find(token_id) == _string_by_token_id.end()){
 			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " 存在しないトークンIDです. _string_by_token_id.find(token_id) == _string_by_token_id.end()");
+			printf(" 存在しないトークンIDです. _string_by_token_id.find(token_id) == _string_by_token_id.end()");
 			exit(1);
 		}
 		return _string_by_token_id[token_id];

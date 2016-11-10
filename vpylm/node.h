@@ -8,6 +8,7 @@
 #include <vector>
 #include <unordered_map>
 #include <cmath>
+#include <cstdlib>
 #include <boost/serialization/serialization.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
@@ -34,8 +35,8 @@ private:
 			_num_customers++;
 			return true;
 		}
-		c_printf("[R]%s", "エラー");
-		c_printf("[n]%s\n", " 客を追加できません. table_k < _arrangement[token_id].size()");
+		c_printf("[r]%s [*]%s\n", "エラー:", "客を追加できません. table_k < _arrangement[token_id].size()");
+		exit(1);
 		return false;
 	}
 	bool add_customer_to_new_table(id token_id, double parent_Pw, vector<double> &d_m, vector<double> &theta_m){
@@ -50,37 +51,34 @@ private:
 		if(_parent != NULL){
 			bool success = _parent->add_customer(token_id, parent_Pw, d_m, theta_m, false);
 			if(success == false){
-				c_printf("[R]%s", "エラー");
-				c_printf("[n]%s\n", " 客を追加できません. success == false");
+				c_printf("[r]%s [*]%s\n", "エラー:", "客を追加できません. success == false");
+				exit(1);
 			}
 		}
 		return true;
 	}
 	bool remove_customer_from_table(id token_id, int table_k){
 		if(_arrangement.find(token_id) == _arrangement.end()){
-			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " 客を除去できません. _arrangement.find(token_id) == _arrangement.end()");
-			return false;
+			c_printf("[r]%s [*]%s\n", "エラー:", "客を除去できません. _arrangement.find(token_id) == _arrangement.end()");
+			exit(1);
 		}
 		if(table_k >= _arrangement[token_id].size()){
-			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " 客を除去できません. table_k >= _arrangement[token_id].size()");
-			return false;
+			c_printf("[r]%s [*]%s\n", "エラー:", "客を除去できません. table_k >= _arrangement[token_id].size()");
+			exit(1);
 		}
 		vector<int> &num_customers_at_table = _arrangement[token_id];
 		num_customers_at_table[table_k]--;
 		_num_customers--;
 		if(num_customers_at_table[table_k] < 0){
-			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " 客の管理に不具合があります. num_customers_at_table[table_k] < 0");
-			return false;
+			c_printf("[r]%s [*]%s\n", "エラー:", "客の管理に不具合があります. num_customers_at_table[table_k] < 0");
+			exit(1);
 		}
 		if(num_customers_at_table[table_k] == 0){
 			if(_parent != NULL){
 				bool success = _parent->remove_customer(token_id, false);
 				if(success == false){
-					c_printf("[R]%s", "エラー");
-					c_printf("[n]%s\n", " 客を除去できません. success == false");
+					c_printf("[r]%s [*]%s\n", "エラー:", "客を除去できません. success == false");
+					exit(1);
 				}
 			}
 			num_customers_at_table.erase(num_customers_at_table.begin() + table_k);
@@ -221,9 +219,8 @@ public:
 	}
 	bool remove_customer(id token_id, bool update_n = true){
 		if(_arrangement.find(token_id) == _arrangement.end()){
-			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " 客を除去できません. _arrangement.find(token_id) == _arrangement.end()");
-			return false;
+			c_printf("[r]%s [*]%s\n", "エラー:", "客を除去できません. _arrangement.find(token_id) == _arrangement.end()");
+			exit(1);
 		}
 		vector<int> &num_customers_at_table = _arrangement[token_id];
 		double sum_props = std::accumulate(num_customers_at_table.begin(), num_customers_at_table.end(), 0);		
@@ -294,8 +291,8 @@ public:
 	void decrement_stop_count(){
 		_stop_count--;
 		if(_stop_count < 0){
-			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " 停止回数の管理に不具合があります. _stop_count < 0");
+			c_printf("[r]%s [*]%s\n", "エラー:", "停止回数の管理に不具合があります. _stop_count < 0");
+			exit(1);
 		}
 		if(_parent != NULL){
 			_parent->decrement_passC_count();
@@ -310,8 +307,8 @@ public:
 	void decrement_passC_count(){
 		_pass_count--;
 		if(_pass_count < 0){
-			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " 通過回数の管理に不具合があります. _pass_count < 0");
+			c_printf("[r]%s [*]%s\n", "エラー:", "通過回数の管理に不具合があります. _pass_count < 0");
+			exit(1);
 		}
 		if(_parent != NULL){
 			_parent->decrement_passC_count();
@@ -357,8 +354,8 @@ public:
 			num += elem.second.size();
 		}
 		if(num != _num_tables){
-			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " テーブルの管理に不具合があります. num != _num_tables");
+			c_printf("[r]%s [*]%s\n", "エラー:", "テーブルの管理に不具合があります. num != _num_tables");
+			exit(1);
 		}
 		for(auto elem: _children){
 			num += elem.second->get_num_tables();
@@ -371,8 +368,8 @@ public:
 			num += std::accumulate(elem.second.begin(), elem.second.end(), 0);
 		}
 		if(num != _num_customers){
-			c_printf("[R]%s", "エラー");
-			c_printf("[n]%s\n", " 客の管理に不具合があります. num != _num_customers");
+			c_printf("[r]%s [*]%s\n", "エラー:", "客の管理に不具合があります. num != _num_customers");
+			exit(1);
 		}
 		for(auto elem: _children){
 			num += elem.second->get_num_customers();
@@ -434,9 +431,8 @@ public:
 			for(int i = 1;i <= _num_tables - 1;i++){
 				double denominator = theta_u + d_u * i;
 				if(denominator == 0){
-					c_printf("[R]%s", "エラー");
-					c_printf("[n]%s\n", " 0除算. denominator == 0");
-					continue;
+					c_printf("[r]%s [*]%s\n", "エラー:", "0除算です. denominator == 0");
+					exit(1);
 				}
 				sum_y_ui += Sampler::bernoulli(theta_u / denominator);;
 			}
@@ -450,9 +446,8 @@ public:
 			for(int i = 1;i <= _num_tables - 1;i++){
 				double denominator = theta_u + d_u * i;
 				if(denominator == 0){
-					c_printf("[R]%s", "エラー");
-					c_printf("[n]%s\n", " 0除算. denominator == 0");
-					continue;
+					c_printf("[r]%s [*]%s\n", "エラー:", "0除算です. denominator == 0");
+					exit(1);
 				}
 				sum_1_y_ui += 1.0 - Sampler::bernoulli(theta_u / denominator);
 			}
@@ -472,9 +467,8 @@ public:
 				if(c_uwk >= 2){
 					for(int j = 1;j <= c_uwk - 1;j++){
 						if(j - d_u == 0){
-							c_printf("[R]%s", "エラー");
-							c_printf("[n]%s\n", " 0除算. j - d_u == 0");
-							continue;
+							c_printf("[r]%s [*]%s\n", "エラー:", "0除算です. j - d_u == 0");
+							exit(1);
 						}
 						sum_z_uwkj += 1 - Sampler::bernoulli((j - 1) / (j - d_u));
 					}

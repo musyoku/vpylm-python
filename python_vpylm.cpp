@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map> 
+#include <boost/format.hpp>
 #include <boost/python.hpp>
 #include "vpylm/c_printf.h"
 #include "vpylm/node.h"
@@ -27,48 +28,42 @@ private:
 public:
 	PyVPYLM(){
 		vpylm = new VPYLM();
-		printf("VPYLMを初期化しています ...\n");
+		c_printf("[*]%s\n", "VPYLMを初期化しています ...");
 	}
 	// 基底分布 i.e. 単語（文字）0-gram確率
 	// 1 / 単語数（文字数）でよい
 	void set_g0(double g0){
 		vpylm->_g0 = g0;
-		printf("G0 <- %lf\n", g0);
+		c_printf("[*]%s\n", (boost::format("G0 <- %lf") % g0).str().c_str());
 	}
 	bool save(string filename){
-		printf("VPYLMを保存しています ...\n");
+		c_printf("[*]%s\n", "VPYLMを保存しています ...");
 		return vpylm->save(filename);
 	}
 	bool load(string filename){
-		printf("VPYLMを読み込んでいます ...\n");
+		c_printf("[*]%s\n", "VPYLMを読み込んでいます ...");
 		return vpylm->load(filename);
 	}
 	python::list perform_gibbs_sampling(python::list &sentence, python::list &prev_orders){
-		std::vector<id> word_ids;
+		std::vector<id> token_ids;
 		int len = python::len(sentence);
 		for(int i = 0;i < len;i++) {
-			word_ids.push_back(python::extract<id>(sentence[i]));
+			token_ids.push_back(python::extract<id>(sentence[i]));
 		}
-		if(python::len(prev_orders) != word_ids.size()){
-			c_printf("[R]%s", "エラー");
-			c_printf("[n] %s", "prev_ordersとword_idsの長さが違います\n");
+		if(python::len(prev_orders) != token_ids.size()){
+			c_printf("[r]%s [*]%s\n", "エラー:", "prev_ordersとword_idsの長さが違います.");
 		}
-		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){
-			int n_t = python::extract<int>(prev_orders[w_t_i]);
-			if(n_t != -1){
-				bool success = vpylm->remove_customer_at_timestep(word_ids, w_t_i, n_t);
-				if(success == false){
-					c_printf("[R]%s", "エラー");
-					c_printf("[n] %s", "客を除去できませんでした\n");
-				}
+		for(int token_t_index = 0;token_t_index < token_ids.size();token_t_index++){
+			int order_t = python::extract<int>(prev_orders[token_t_index]);
+			if(order_t != -1){
+				vpylm->remove_customer_at_timestep(token_ids, token_t_index, order_t);
 			}
 		}				
-
 		vector<int> new_order;
-		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){
-			int n_t = vpylm->sample_order_at_timestep(word_ids, w_t_i);
-			vpylm->add_customer_at_timestep(word_ids, w_t_i, n_t);
-			new_order.push_back(n_t);
+		for(int token_t_index = 0;token_t_index < token_ids.size();token_t_index++){
+			int order_t = vpylm->sample_order_at_timestep(token_ids, token_t_index);
+			vpylm->add_customer_at_timestep(token_ids, token_t_index, order_t);
+			new_order.push_back(order_t);
 		}
 		return list_from_vector(new_order);
 	}
@@ -104,34 +99,34 @@ public:
 		vpylm->sample_hyperparams();
 	}
 	python::list sample_orders(python::list &sentence){
-		std::vector<id> word_ids;
+		std::vector<id> token_ids;
 		int len = python::len(sentence);
 		for(int i = 0;i < len;i++) {
-			word_ids.push_back(python::extract<id>(sentence[i]));
+			token_ids.push_back(python::extract<id>(sentence[i]));
 		}
 		vector<int> new_order;
-		for(int w_t_i = 0;w_t_i < word_ids.size();w_t_i++){
-			int n_t = vpylm->sample_order_at_timestep(word_ids, w_t_i);
-			vpylm->add_customer_at_timestep(word_ids, w_t_i, n_t);
-			new_order.push_back(n_t);
+		for(int token_t_index = 0;token_t_index < token_ids.size();token_t_index++){
+			int order_t = vpylm->sample_order_at_timestep(token_ids, token_t_index);
+			vpylm->add_customer_at_timestep(token_ids, token_t_index, order_t);
+			new_order.push_back(order_t);
 		}
 		return list_from_vector(new_order);
 	}
 	id sample_next_token(python::list &sentence, id eos_id){
-		std::vector<id> word_ids;
+		std::vector<id> token_ids;
 		int len = python::len(sentence);
 		for(int i = 0; i<len; i++) {
-			word_ids.push_back(python::extract<id>(sentence[i]));
+			token_ids.push_back(python::extract<id>(sentence[i]));
 		}
-		return vpylm->sample_next_token(word_ids, eos_id);
+		return vpylm->sample_next_token(token_ids, eos_id);
 	}
 	double log_Pw(python::list &sentence){
-		std::vector<id> word_ids;
+		std::vector<id> token_ids;
 		int len = python::len(sentence);
 		for(int i = 0; i<len; i++) {
-			word_ids.push_back(python::extract<id>(sentence[i]));
+			token_ids.push_back(python::extract<id>(sentence[i]));
 		}
-		return vpylm->log_Pw(word_ids);
+		return vpylm->log_Pw(token_ids);
 	}
 	python::list enumerate_phrases_at_depth(int depth){
 		vector<vector<id>> phrase_vectors;

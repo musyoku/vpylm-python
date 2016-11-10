@@ -1,4 +1,5 @@
-﻿#include "util.h"
+﻿#include <boost/format.hpp>
+#include "util.h"
 #include "vpylm/vpylm.h"
 
 class Model{
@@ -8,10 +9,10 @@ public:
 	vector<vector<int>> prev_orders_for_data;
 	VPYLM* vpylm;
 	Model(double g0){
-		cout << "VPYLMを初期化しています ..." << endl;
+		c_printf("[*]%s\n", "VPYLMを初期化しています ...");
 		vpylm = new VPYLM();
 		vpylm->set_g0(g0);
-		cout << "g0 <- " << g0 << endl;
+		c_printf("[*]%s\n", (boost::format("G0 <- %lf") % g0).str().c_str());
 		vpylm->load(vpylm_filename);
 	}
 	void init_trainer(vector<vector<id>> &dataset){
@@ -39,6 +40,7 @@ public:
 	}
 	void train(Vocab* vocab, vector<vector<id>> &dataset){
 		init_trainer(dataset);
+		load_trainer();
 		vector<int> rand_indices;
 		for(int data_index = 0;data_index < dataset.size();data_index++){
 			rand_indices.push_back(data_index);
@@ -80,20 +82,15 @@ public:
 				ppl += log_p;
 			}
 			ppl = exp(-ppl / num_data);
-			printf("Epoch %d / %d - %.1f lps - %.3f ppl - %d nodes - %d customers\n", epoch, max_epoch, (double)num_data / msec * 1000.0, ppl, vpylm->get_num_nodes(), vpylm->get_num_customers());
+			printf("Epoch %d / %d - %.1f lps - %.3f ppl - %d depth - %d nodes - %d customers\n", epoch, max_epoch, (double)num_data / msec * 1000.0, ppl, vpylm->get_max_depth(), vpylm->get_num_nodes(), vpylm->get_num_customers());
 
 			if(epoch % 100 == 0){
-				vpylm->save(vpylm_filename);
-				std::ofstream ofs(trainer_filename);
-				boost::archive::binary_oarchive oarchive(ofs);
-				oarchive << prev_orders_for_data;
+				save_model();
+				save_trainer();
 			}
 		}
-
-		vpylm->save(vpylm_filename);
-		std::ofstream ofs(trainer_filename);
-		boost::archive::binary_oarchive oarchive(ofs);
-		oarchive << prev_orders_for_data;
+		save_model();
+		save_trainer();
 
 		// <!-- デバッグ用
 		//客を全て削除した時に客数が本当に0になるかを確認する場合
@@ -113,7 +110,7 @@ public:
 		cout << vpylm->get_sum_pass_counts() << endl;
 	}
 	void enumerate_phrases_at_depth(Vocab* vocab, int depth, wstring spacer){
-		c_printf("[*]深さ%dの句を表示します\n", depth);
+		c_printf("[*]%s\n", (boost::format("深さ%dの句を表示します ...") % depth).str().c_str());
 		vector<vector<id>> phrases;
 		vpylm->enumerate_phrases_at_depth(depth, phrases);
 		for(int i = 0;i < phrases.size();i++){
@@ -126,6 +123,7 @@ public:
 		}
 	}
 	void generate_words(Vocab* vocab, wstring spacer){
+		c_printf("[*]%s\n", "文章を生成しています ...");
 		int num_sample = 50;
 		int max_length = 400;
 		id bos_id = vocab->string_to_token_id(L"<bos>");
@@ -171,16 +169,14 @@ int main(int argc, char *argv[]){
 	string text_filename;
 	cout << "num args = " << argc << endl;
 	if(argc % 2 != 1){
-		c_printf("[R]%s", "エラー");
-		c_printf("[n] %s\n", "テキストファイルを指定してください. -t example.txt");
+		c_printf("[r]%s [*]%s\n", "エラー:", "テキストファイルを指定してください. -t example.txt");
 		exit(1);
 	}else{
 		for(int i = 0; i < argc; i++){
 			cout << i << "-th args = " << argv[i] << endl; 
 			if (string(argv[i]) == "-t" || string(argv[i]) == "--text"){
 				if(i + 1 >= argc){
-					c_printf("[R]%s", "エラー");
-					cout << "不正なコマンドライン引数です. " << string(argv[i]) << endl;
+					c_printf("[r]%s [*]%s %s\n", "エラー:", "不正なコマンドライン引数です.", string(argv[i]).c_str());
 					exit(1);
 				}
 				text_filename = string(argv[i + 1]);
