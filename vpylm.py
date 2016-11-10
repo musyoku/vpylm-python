@@ -148,7 +148,7 @@ def show_progress(step, total):
 	sys.stdout.flush()
 
 def main():
-	# train()
+	train()
 	for n in xrange(100):
 		generate_words()
 	visualize_orders()

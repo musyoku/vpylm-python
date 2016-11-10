@@ -131,9 +131,7 @@ public:
 		vector<id> token_ids;
 		for(int s = 0;s < num_sample;s++){
 			token_ids.clear();
-			for(int i = 0;i < vpylm->ngram();i++){
-				token_ids.push_back(bos_id);
-			}
+			token_ids.push_back(bos_id);
 			for(int i = 0;i < max_length;i++){
 				id token_id = vpylm->sample_next_token(token_ids, eos_id);
 				token_ids.push_back(token_id);
