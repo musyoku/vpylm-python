@@ -68,7 +68,7 @@ public:
 	}
 	python::list count_tokens_of_each_depth(){
 		unordered_map<int, int> counts_by_depth;
-		vpylm->count_tokens_of_each_depth(counts_by_depth);
+		hpylm->count_tokens_of_each_depth(counts_by_depth);
 
 		// ソート
 		std::map<int, int> sorted_counts_by_depth(counts_by_depth.begin(), counts_by_depth.end());
