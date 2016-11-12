@@ -3,10 +3,10 @@
 #include <unordered_map> 
 #include <boost/format.hpp>
 #include <boost/python.hpp>
-#include "vpylm/c_printf.h"
-#include "vpylm/node.h"
-#include "vpylm/vpylm.h"
-#include "vpylm/vocab.h"
+#include "core/c_printf.h"
+#include "core/node.h"
+#include "core/vpylm.h"
+#include "core/vocab.h"
 
 using namespace boost;
 

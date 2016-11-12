@@ -1,6 +1,6 @@
 ﻿#include <boost/format.hpp>
 #include "util.h"
-#include "vpylm/vpylm.h"
+#include "core/vpylm.h"
 
 class Model{
 public:

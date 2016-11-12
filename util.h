@@ -1,6 +1,6 @@
 #include <vector>
 #include <string>
-#include "vpylm/vocab.h"
+#include "core/vocab.h"
 using namespace std;
 
 vector<wstring> split(const wstring &s, char delim){

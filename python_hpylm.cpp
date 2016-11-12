@@ -2,10 +2,10 @@
 #include <string>
 #include <unordered_map> 
 #include <boost/python.hpp>
-#include "vpylm/c_printf.h"
-#include "vpylm/node.h"
-#include "vpylm/hpylm.h"
-#include "vpylm/vocab.h"
+#include "core/c_printf.h"
+#include "core/node.h"
+#include "core/hpylm.h"
+#include "core/vocab.h"
 
 using namespace boost;
 
