@@ -3,15 +3,23 @@ import numpy as np
 import math, sys, time, pickle, os
 import hpylm
 import dataset
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-t", "--textdir", type=str, help="訓練用のテキストファイルが入っているディレクトリ名. このディレクトリ内の全てのテキストファイルが読み込まれます.")
+parser.add_argument("-m", "--modeldir", type=str, default="model", help="モデル保存用ディレクトリ.")
+parser.add_argument("-n", "--ngram", type=int, default=3, help="HPYLMのn-gram長.")
+args = parser.parse_args()
 
 try:
-	os.mkdir("model")
+	os.mkdir(args.modeldir)
 except:
 	pass
 
-ngram = 3
-model_filename = "model/python_hpylm.model"
-trainer_filename = "model/python_hpylm.trainer"
+
+ngram = args.ngram
+model_filename = args.modeldir + "/python_hpylm.model"
+trainer_filename = args.modeldir + "/python_hpylm.trainer"
 model = hpylm.hpylm(ngram)
 file_exists = model.load(model_filename)
 if file_exists:
@@ -22,7 +30,7 @@ if file_exists:
 
 # データの読み込み
 split_by = "word"
-lines, n_vocab, n_data = dataset.load("alice", split_by=split_by, include_whitespace=False, bos_padding=ngram)
+lines, n_vocab, n_data = dataset.load(args.textdir, split_by=split_by, include_whitespace=False, bos_padding=ngram)
 
 # 文章生成
 def generate_words():

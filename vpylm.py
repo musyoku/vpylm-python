@@ -3,18 +3,25 @@ import numpy as np
 import math, sys, time, pickle, os
 import vpylm
 import dataset
+import argparse
 
-# データの読み込み
-split_by = "word"
-lines, n_vocab, n_data = dataset.load("alice", split_by=split_by, include_whitespace=False)
+parser = argparse.ArgumentParser()
+parser.add_argument("-t", "--textdir", type=str, help="訓練用のテキストファイルが入っているディレクトリ名. このディレクトリ内の全てのテキストファイルが読み込まれます.")
+parser.add_argument("-m", "--modeldir", type=str, default="model", help="モデル保存用ディレクトリ.")
+parser.add_argument("-n", "--ngram", type=int, default=3, help="HPYLMのn-gram長.")
+args = parser.parse_args()
 
 try:
-	os.mkdir("model")
+	os.mkdir(args.modeldir)
 except:
 	pass
 
-model_filename = "model/python_vpylm.model"
-trainer_filename = "model/python_vpylm.trainer"
+# データの読み込み
+split_by = "word"
+lines, n_vocab, n_data = dataset.load(args.textdir, split_by=split_by, include_whitespace=False)
+
+model_filename = args.modeldir + "/python_vpylm.model"
+trainer_filename = args.modeldir + "/python_vpylm.trainer"
 model = vpylm.vpylm()
 file_exists = model.load(model_filename)
 if file_exists:
