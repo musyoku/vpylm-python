@@ -4,6 +4,11 @@ import math, sys, time, pickle, os
 import hpylm
 import dataset
 
+try:
+	os.mkdir("model")
+else:
+	pass
+	
 ngram = 3
 model_filename = "model/python_hpylm.model"
 trainer_filename = "model/python_hpylm.trainer"
