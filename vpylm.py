@@ -10,9 +10,9 @@ lines, n_vocab, n_data = dataset.load("alice", split_by=split_by, include_whites
 
 try:
 	os.mkdir("model")
-else:
+except:
 	pass
-	
+
 model_filename = "model/python_vpylm.model"
 trainer_filename = "model/python_vpylm.trainer"
 model = vpylm.vpylm()
