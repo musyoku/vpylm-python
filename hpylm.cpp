@@ -200,12 +200,12 @@ int main(int argc, char *argv[]){
 	}
 	vector<vector<id>> dataset;
 	Vocab* vocab;
-	load_words_in_textfile(text_filename, dataset, vocab, ngram);
+	load_words_in_textfile(text_filename, dataset, vocab, ngram - 1);
 
 	int num_chars = vocab->num_tokens();
 	double g0 = (1.0 / num_chars);
 	Model* hpylm = new Model(ngram, g0);
-	// hpylm->train(vocab, dataset);
+	hpylm->train(vocab, dataset);
 	hpylm->generate_words(vocab, L" ");
 	return 0;
 }

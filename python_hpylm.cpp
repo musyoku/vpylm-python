@@ -96,13 +96,13 @@ public:
 		}
 		return hpylm->sample_next_token(context_token_ids, eos_id);
 	}
-	double log_Pw(python::list &sentence){
+	double log2_Pw(python::list &sentence){
 		std::vector<id> token_ids;
 		int len = python::len(sentence);
 		for(int i = 0; i<len; i++) {
 			token_ids.push_back(python::extract<id>(sentence[i]));
 		}
-		return hpylm->log_Pw(token_ids);
+		return hpylm->log2_Pw(token_ids);
 	}
 };
 
@@ -116,7 +116,7 @@ BOOST_PYTHON_MODULE(hpylm){
 	.def("get_discount_parameters", &PyHPYLM::get_discount_parameters)
 	.def("get_strength_parameters", &PyHPYLM::get_strength_parameters)
 	.def("sample_hyperparameters", &PyHPYLM::sample_hyperparameters)
-	.def("log_Pw", &PyHPYLM::log_Pw)
+	.def("log2_Pw", &PyHPYLM::log2_Pw)
 	.def("sample_next_token", &PyHPYLM::sample_next_token)
 	.def("count_tokens_of_each_depth", &PyHPYLM::count_tokens_of_each_depth)
 	.def("save", &PyHPYLM::save)
