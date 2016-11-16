@@ -55,7 +55,7 @@ def load(dir, split_by="word", include_whitespace=False, bos_padding=1):
 				else:
 					raise NotImplementedError()
 
-				ids = [vocab["<bos>"]] + ids + [vocab["<eos>"]]
+				ids += [vocab["<eos>"]]
 				data.append(ids)
 	n_vocab = len(vocab)
 	n_data = len(data)

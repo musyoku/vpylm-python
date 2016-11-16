@@ -6,7 +6,7 @@ class Model{
 public:
 	string vpylm_filename = "model/vpylm.model";
 	string trainer_filename = "model/vpylm.trainer";
-	vector<vector<int>> prev_orders_for_data;
+	vector<vector<int>> prev_depths_for_data;
 	VPYLM* vpylm;
 	Model(double g0){
 		c_printf("[*]%s\n", "VPYLMを初期化しています ...");
@@ -16,18 +16,18 @@ public:
 		vpylm->load(vpylm_filename);
 	}
 	void init_trainer(vector<vector<id>> &dataset){
-		prev_orders_for_data.clear();
+		prev_depths_for_data.clear();
 		for(int data_index = 0;data_index < dataset.size();data_index++){
 			vector<id> &token_ids = dataset[data_index];
 			vector<int> prev_depth(token_ids.size(), -1);
-			prev_orders_for_data.push_back(prev_depth);
+			prev_depths_for_data.push_back(prev_depth);
 		}
 	}
 	void load_trainer(){
 		std::ifstream ifs(trainer_filename);
 		if(ifs.good()){
 			boost::archive::binary_iarchive iarchive(ifs);
-			iarchive >> prev_orders_for_data;
+			iarchive >> prev_depths_for_data;
 		}
 	}
 	void save_model(){
@@ -36,7 +36,7 @@ public:
 	void save_trainer(){
 		std::ofstream ofs(trainer_filename);
 		boost::archive::binary_oarchive oarchive(ofs);
-		oarchive << prev_orders_for_data;
+		oarchive << prev_depths_for_data;
 	}
 	void train(Vocab* vocab, vector<vector<id>> &dataset){
 		init_trainer(dataset);
@@ -56,7 +56,7 @@ public:
 				show_progress(step, num_data);
 				int data_index = rand_indices[step];
 				vector<id> &token_ids = dataset[data_index];
-				vector<int> &prev_depth = prev_orders_for_data[data_index];
+				vector<int> &prev_depth = prev_depths_for_data[data_index];
 
 				for(int token_t_index = 0;token_t_index < token_ids.size();token_t_index++){
 					if(prev_depth[token_t_index] != -1){

@@ -119,13 +119,13 @@ public:
 		}
 		return vpylm->sample_next_token(token_ids, eos_id);
 	}
-	double log_Pw(python::list &sentence){
+	double log2_Pw(python::list &sentence){
 		std::vector<id> token_ids;
 		int len = python::len(sentence);
 		for(int i = 0; i<len; i++) {
 			token_ids.push_back(python::extract<id>(sentence[i]));
 		}
-		return vpylm->log_Pw(token_ids);
+		return vpylm->log2_Pw(token_ids);
 	}
 	python::list enumerate_phrases_at_depth(int depth){
 		vector<vector<id>> phrase_vectors;
@@ -148,7 +148,7 @@ BOOST_PYTHON_MODULE(vpylm){
 	.def("get_discount_parameters", &PyVPYLM::get_discount_parameters)
 	.def("get_strength_parameters", &PyVPYLM::get_strength_parameters)
 	.def("sample_hyperparameters", &PyVPYLM::sample_hyperparameters)
-	.def("log_Pw", &PyVPYLM::log_Pw)
+	.def("log2_Pw", &PyVPYLM::log2_Pw)
 	.def("sample_next_token", &PyVPYLM::sample_next_token)
 	.def("sample_depth", &PyVPYLM::sample_depth)
 	.def("count_tokens_of_each_depth", &PyVPYLM::count_tokens_of_each_depth)

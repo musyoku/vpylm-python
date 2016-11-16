@@ -128,7 +128,7 @@ def train():
 		sum_log_Pw = 0
 		for index in xrange(n_data):
 			line = lines[index]
-			sum_log_Pw += model.log_Pw(line) / len(line)
+			sum_log_Pw += model.log2_Pw(line) / len(line)
 		vpylm_ppl = math.exp(-sum_log_Pw / n_data);
 
 		lines_per_sec = n_data / float(time.time() - start_time)
