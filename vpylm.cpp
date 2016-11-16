@@ -19,8 +19,8 @@ public:
 		prev_orders_for_data.clear();
 		for(int data_index = 0;data_index < dataset.size();data_index++){
 			vector<id> &token_ids = dataset[data_index];
-			vector<int> prev_orders(token_ids.size(), -1);
-			prev_orders_for_data.push_back(prev_orders);
+			vector<int> prev_depth(token_ids.size(), -1);
+			prev_orders_for_data.push_back(prev_depth);
 		}
 	}
 	void load_trainer(){
@@ -56,15 +56,15 @@ public:
 				show_progress(step, num_data);
 				int data_index = rand_indices[step];
 				vector<id> &token_ids = dataset[data_index];
-				vector<int> &prev_orders = prev_orders_for_data[data_index];
+				vector<int> &prev_depth = prev_orders_for_data[data_index];
 
 				for(int token_t_index = 0;token_t_index < token_ids.size();token_t_index++){
-					if(prev_orders[token_t_index] != -1){
-						vpylm->remove_customer_at_timestep(token_ids, token_t_index, prev_orders[token_t_index]);
+					if(prev_depth[token_t_index] != -1){
+						vpylm->remove_customer_at_timestep(token_ids, token_t_index, prev_depth[token_t_index]);
 					}
-					int new_order = vpylm->sample_order_at_timestep(token_ids, token_t_index);
-					vpylm->add_customer_at_timestep(token_ids, token_t_index, new_order);
-					prev_orders[token_t_index] = new_order;
+					int new_depth = vpylm->sample_depth_at_timestep(token_ids, token_t_index);
+					vpylm->add_customer_at_timestep(token_ids, token_t_index, new_depth);
+					prev_depth[token_t_index] = new_depth;
 				}
 			}
 
@@ -192,7 +192,7 @@ int main(int argc, char *argv[]){
 	int num_chars = vocab->num_tokens();
 	double g0 = (1.0 / num_chars);
 	Model* vpylm = new Model(g0);
-	// vpylm->train(vocab, dataset);
+	vpylm->train(vocab, dataset);
 	vpylm->generate_words(vocab, L" ");
 	vpylm->enumerate_phrases_at_depth(vocab, 6, L" ");
 	return 0;

@@ -44,28 +44,28 @@ public:
 		c_printf("[*]%s\n", "VPYLMを読み込んでいます ...");
 		return vpylm->load(filename);
 	}
-	python::list perform_gibbs_sampling(python::list &sentence, python::list &prev_orders){
+	python::list perform_gibbs_sampling(python::list &sentence, python::list &prev_depth){
 		std::vector<id> token_ids;
 		int len = python::len(sentence);
 		for(int i = 0;i < len;i++) {
 			token_ids.push_back(python::extract<id>(sentence[i]));
 		}
-		if(python::len(prev_orders) != token_ids.size()){
+		if(python::len(prev_depth) != token_ids.size()){
 			c_printf("[r]%s [*]%s\n", "エラー:", "prev_ordersとword_idsの長さが違います.");
 		}
 		for(int token_t_index = 0;token_t_index < token_ids.size();token_t_index++){
-			int order_t = python::extract<int>(prev_orders[token_t_index]);
-			if(order_t != -1){
-				vpylm->remove_customer_at_timestep(token_ids, token_t_index, order_t);
+			int depth_t = python::extract<int>(prev_depth[token_t_index]);
+			if(depth_t != -1){
+				vpylm->remove_customer_at_timestep(token_ids, token_t_index, depth_t);
 			}
 		}				
-		vector<int> new_order;
+		vector<int> new_depth;
 		for(int token_t_index = 0;token_t_index < token_ids.size();token_t_index++){
-			int order_t = vpylm->sample_order_at_timestep(token_ids, token_t_index);
-			vpylm->add_customer_at_timestep(token_ids, token_t_index, order_t);
-			new_order.push_back(order_t);
+			int depth_t = vpylm->sample_depth_at_timestep(token_ids, token_t_index);
+			vpylm->add_customer_at_timestep(token_ids, token_t_index, depth_t);
+			new_depth.push_back(depth_t);
 		}
-		return list_from_vector(new_order);
+		return list_from_vector(new_depth);
 	}
 	int get_max_depth(){
 		return vpylm->get_max_depth();
@@ -98,19 +98,18 @@ public:
 	void sample_hyperparameters(){
 		vpylm->sample_hyperparams();
 	}
-	python::list sample_orders(python::list &sentence){
+	python::list sample_depth(python::list &sentence){
 		std::vector<id> token_ids;
 		int len = python::len(sentence);
 		for(int i = 0;i < len;i++) {
 			token_ids.push_back(python::extract<id>(sentence[i]));
 		}
-		vector<int> new_order;
+		vector<int> depths;
 		for(int token_t_index = 0;token_t_index < token_ids.size();token_t_index++){
-			int order_t = vpylm->sample_order_at_timestep(token_ids, token_t_index);
-			vpylm->add_customer_at_timestep(token_ids, token_t_index, order_t);
-			new_order.push_back(order_t);
+			int depth_t = vpylm->sample_depth_at_timestep(token_ids, token_t_index);
+			depths.push_back(depth_t);
 		}
-		return list_from_vector(new_order);
+		return list_from_vector(depths);
 	}
 	id sample_next_token(python::list &sentence, id eos_id){
 		std::vector<id> token_ids;
@@ -151,7 +150,7 @@ BOOST_PYTHON_MODULE(vpylm){
 	.def("sample_hyperparameters", &PyVPYLM::sample_hyperparameters)
 	.def("log_Pw", &PyVPYLM::log_Pw)
 	.def("sample_next_token", &PyVPYLM::sample_next_token)
-	.def("sample_orders", &PyVPYLM::sample_orders)
+	.def("sample_depth", &PyVPYLM::sample_depth)
 	.def("count_tokens_of_each_depth", &PyVPYLM::count_tokens_of_each_depth)
 	.def("enumerate_phrases_at_depth", &PyVPYLM::enumerate_phrases_at_depth)
 	.def("save", &PyVPYLM::save)

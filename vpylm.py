@@ -52,23 +52,24 @@ def generate_words():
 	print str
 
 # 単語が生成されたn-gramオーダーをサンプリングして表示する
+# 深さ0 = ユニグラム（オーダー1）
 def visualize_orders():
 	indices = np.arange(n_data)
 	np.random.shuffle(indices)
 	for i in xrange(50):
 		index = indices[i]
 		line = lines[index]
-		orders = model.sample_orders(line)
+		depth = model.sample_depth(line)
 		sentence_str = ""
 		order_str = ""
 		for i, id in enumerate(line[1:-1]):
 			word = dataset.id_to_word(id)
 			if split_by == "word":
 				sentence_str += word + " "
-				order_str += " " * (len(word) // 2) + str(orders[i + 1]) + " " * (len(word) - len(word) // 2)
+				order_str += " " * (len(word) // 2) + str(depth[i] + 1) + " " * (len(word) - len(word) // 2)
 			elif split_by == "char" or split_by == "character":
 				sentence_str += word
-				order_str += str(orders[i + 1])
+				order_str += str(depth[i] + 1)
 		print sentence_str
 		print order_str
 		print "\n"
