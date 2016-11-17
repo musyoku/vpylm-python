@@ -93,14 +93,14 @@ def train():
 	# 前回推定したn-gramオーダー
 	if os.path.exists(trainer_filename):
 		with open(trainer_filename, "rb") as f:
-			prev_order_list = pickle.load(f)
+			prev_depths_for_data = pickle.load(f)
 	else:
-		prev_order_list = []
+		prev_depths_for_data = []
 		for i, line in enumerate(lines):
-			prev_order = []
+			prev_depths = []
 			for j in xrange(len(line)):
-				prev_order.append(-1)
-			prev_order_list.append(prev_order)
+				prev_depths.append(-1)
+			prev_depths_for_data.append(prev_depths)
 
 	model.set_g0(1.0 / n_vocab)
 
@@ -115,9 +115,9 @@ def train():
 		for train_step in xrange(n_data):
 			index = indices[train_step]
 			line = lines[index]
-			prev_order = prev_order_list[index]
-			new_order = model.perform_gibbs_sampling(line, prev_order)
-			prev_order_list[index] = new_order[:]
+			prev_depths = prev_depths_for_data[index]
+			new_order = model.perform_gibbs_sampling(line, prev_depths)
+			prev_depths_for_data[index] = new_order[:]
 
 			if train_step % (n_data // 200) == 0 or train_step == n_data - 1:
 				show_progress(train_step, n_data)
@@ -139,11 +139,11 @@ def train():
 		if epoch % 100 == 0:
 			model.save(model_filename)
 			with open(trainer_filename, "wb") as f:
-				pickle.dump(prev_order_list, f)
+				pickle.dump(prev_depths_for_data, f)
 
 	model.save(model_filename)
 	with open(trainer_filename, "wb") as f:
-		pickle.dump(prev_order_list, f)
+		pickle.dump(prev_depths_for_data, f)
 
 def show_progress(step, total):
 	progress = step / float(total - 1)
