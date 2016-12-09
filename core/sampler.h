@@ -1,6 +1,7 @@
 #ifndef _sampler_
 #define _sampler_
 #include <random>
+#include <chrono>
 
 using namespace std;
 
